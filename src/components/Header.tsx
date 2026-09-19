@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { TabType } from '../types';
 import { Shield, Terminal, Menu, X, Cpu, KeyRound } from 'lucide-react';
+import logo from '../assets/images/logo.jpg';
 
 interface HeaderProps {
   activeTab: TabType;
@@ -41,8 +42,8 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="relative">
               <img
                 alt="NotMice Research Protocol"
-                className="w-9 h-9 rounded-full object-cover ring-2 ring-[#006194]/20 group-hover:ring-[#006194]/50 transition-all"
-                src="https://lh3.googleusercontent.com/aida/AEtjO1WjhhiY5OJnWJ6GKB5XdTf0_4k-aMzMw4vleFit1BARxh5Y894ENmrKtb1bX1pM2IpF6MXccBv90qd5SUjX-u2Wfm0HbCGdw1ue2bTj_Qq3a9DMY-H_a2D16BAYpHB4TK81wRFE89ZlqiJCPuoY2QNRZL9Ey58WSJP6ieZEKS6dopki1jAcmzIk25NOnua_TWtIclMLHt4b7UlEbw_-4LMgKQXabLHR5l4-Ci4JOLXBIm5sTf02yq5LujEz36-P_xu9qvoBIPNz"
+                className="w-12 h-12 rounded-full object-cover ring-2 ring-[#006194]/20 group-hover:ring-[#006194]/50 transition-all"
+                src={logo}
                 referrerPolicy="no-referrer"
               />
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[#00855b] border-2 border-white rounded-full"></span>
