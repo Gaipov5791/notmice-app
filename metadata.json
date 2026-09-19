@@ -1,0 +1,6 @@
+{
+  "name": "NotMice",
+  "description": "Zero-cloud biological age tracking and longevity research platform calculating Levine PhenoAge from blood panels.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
