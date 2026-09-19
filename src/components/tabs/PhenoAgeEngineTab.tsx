@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { TabType, PhenoAgeCalculation } from '../../types';
 import { PHENOAGE_BIOMARKERS } from '../../data/phenoAgeData';
+import { LifestyleLongevityAdvisor } from '../LifestyleLongevityAdvisor';
 import {
   Activity,
   Calculator,
@@ -386,6 +387,13 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Dynamic Actionable Longevity & Lifestyle Advisor based on current biomarkers */}
+      <LifestyleLongevityAdvisor
+        biomarkers={biomarkers}
+        calculation={calculation}
+        chronologicalAge={chronologicalAge}
+      />
     </div>
   );
 };

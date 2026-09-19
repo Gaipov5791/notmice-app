@@ -267,18 +267,27 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 </div>
               </div>
 
-              {/* Cryptographic Validation Seal */}
-              <div className="flex items-center justify-between bg-[#eff4ff] p-2.5 rounded border border-[#dce9ff] text-[#3f4850] font-['JetBrains_Mono'] text-xs">
+              {/* Cryptographic Validation Seal & Longevity Advisor Link */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[#eff4ff] p-2.5 rounded border border-[#dce9ff] text-[#3f4850] font-['JetBrains_Mono'] text-xs">
                 <div className="flex items-center gap-1.5 truncate">
                   <ShieldCheck className="w-4 h-4 text-[#006947] shrink-0" />
-                  <span className="truncate">Zero-Knowledge Hash: 8fbc73...19a4e2</span>
+                  <span className="truncate">ZK-Hash: 8fbc73...19a4e2</span>
                 </div>
-                <button
-                  onClick={onOpenProofModal}
-                  className="text-[#006194] hover:text-[#007bb9] font-['Inter'] text-xs font-semibold shrink-0 cursor-pointer"
-                >
-                  Inspect Proof
-                </button>
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    onClick={() => setActiveTab('phenoage-engine')}
+                    className="text-[#006947] hover:underline font-['Inter'] text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Longevity Advice</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={onOpenProofModal}
+                    className="text-[#006194] hover:text-[#007bb9] font-['Inter'] text-xs font-semibold shrink-0 cursor-pointer"
+                  >
+                    Inspect Proof
+                  </button>
+                </div>
               </div>
             </div>
 
