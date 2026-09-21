@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { TabType, LabPanelData } from '../../types';
-import { PRESET_LAB_PANELS } from '../../data/phenoAgeData';
+import { INITIAL_BIOMARKERS, PHENOAGE_BIOMARKERS, PRESET_LAB_PANELS } from '../../data/phenoAgeData';
+import { extractLabFile } from '../../api/uploads';
 import {
   UploadCloud,
-  FileText,
-  CheckCircle2,
   Lock,
   Cpu,
   ShieldCheck,
-  Zap,
   ArrowRight,
   FileCheck,
   RefreshCw,
@@ -19,69 +17,108 @@ interface UploadLabTabProps {
   onLoadPanel: (panel: LabPanelData) => void;
   setActiveTab: (tab: TabType) => void;
   accountAddress: string;
+  accessToken: string | null;
+  isAuthenticated: boolean;
+  onRequestAuth: () => void;
 }
 
 export const UploadLabTab: React.FC<UploadLabTabProps> = ({
   onLoadPanel,
   setActiveTab,
   accountAddress,
+  accessToken,
+  isAuthenticated,
+  onRequestAuth,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progressStep, setProgressStep] = useState(0);
   const [progressMsg, setProgressMsg] = useState('');
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
-  const simulateOcrProcess = (
+  const loadPresetPanel = (
     fileName: string,
     presetKey: 'quest' | 'labcorp' | 'nhs' = 'quest'
   ) => {
+    setUploadError(null);
     setIsProcessing(true);
     setSelectedFileName(fileName);
-    setProgressStep(1);
-    setProgressMsg('Mounting local PDF canvas into in-memory WebWorker...');
+    setProgressStep(5);
+    setProgressMsg('Loading local demo fixture (not parsed from a document).');
 
     const preset = PRESET_LAB_PANELS[presetKey];
+    const newPanel: LabPanelData = {
+      id: `panel-${Date.now()}`,
+      labName: preset.source,
+      testDate: preset.date,
+      sourceType: 'demo',
+      fileName: fileName,
+      chronologicalAge: preset.age,
+      gender: 'male',
+      biomarkers: { ...preset.values },
+      confidenceScores: { ...preset.confidence },
+      verified: false,
+      hash: `demo-${presetKey}`,
+    };
 
-    setTimeout(() => {
+    onLoadPanel(newPanel);
+    setIsProcessing(false);
+    setActiveTab('review-extraction');
+  };
+
+  const processLabFile = async (file: File) => {
+    if (!isAuthenticated || !accessToken) {
+      onRequestAuth();
+      return;
+    }
+    setUploadError(null);
+    setIsProcessing(true);
+    setSelectedFileName(file.name);
+    setProgressStep(1);
+    setProgressMsg('Uploading to server RAM. Original will not be written to disk...');
+    try {
       setProgressStep(2);
-      setProgressMsg('Tesseract WebAssembly 2.0 isolating tabular cell boundaries...');
-    }, 400);
-
-    setTimeout(() => {
-      setProgressStep(3);
-      setProgressMsg('Matching optical text indices to LOINC 2024.2 clinical dictionary...');
-    }, 850);
-
-    setTimeout(() => {
-      setProgressStep(4);
-      setProgressMsg('Converting units (g/dL ⇄ g/L, mg/dL ⇄ μmol/L) & calculating checksum...');
-    }, 1300);
-
-    setTimeout(() => {
+      setProgressMsg('Computing SHA-256 and extracting markers...');
+      const extracted = await extractLabFile(accessToken, file);
       setProgressStep(5);
-      setProgressMsg('Extraction verified! 9 of 9 PhenoAge biomarkers ready for sign-off.');
+      setProgressMsg('Extraction ready for human review.');
+
+      const biomarkers: Record<string, number> = { ...INITIAL_BIOMARKERS };
+      const confidenceScores: Record<string, number> = {};
+      PHENOAGE_BIOMARKERS.forEach((item) => {
+        confidenceScores[item.id] = 0;
+      });
+      for (const marker of extracted.markers) {
+        if (marker.canonicalId) {
+          biomarkers[marker.canonicalId] = marker.value;
+          confidenceScores[marker.canonicalId] = marker.confidence;
+        }
+      }
 
       const newPanel: LabPanelData = {
         id: `panel-${Date.now()}`,
-        labName: preset.source,
-        testDate: preset.date,
+        labName: extracted.labName ?? 'Unknown laboratory',
+        testDate: extracted.collectedAt ?? new Date().toISOString().slice(0, 10),
         sourceType: 'pdf',
-        fileName: fileName,
-        chronologicalAge: preset.age,
+        fileName: file.name,
+        chronologicalAge: extracted.chronologicalAge ?? 42,
         gender: 'male',
-        biomarkers: { ...preset.values },
-        confidenceScores: { ...preset.confidence },
+        biomarkers,
+        confidenceScores,
         verified: false,
-        hash: `0x${Math.random().toString(16).slice(2, 10)}...${Math.random()
-          .toString(16)
-          .slice(2, 6)}`,
+        hash: extracted.documentSha256,
+        extractToken: extracted.extractToken,
+        parserVersion: extracted.parserVersion,
+        extractedMarkers: extracted.markers,
       };
-
       onLoadPanel(newPanel);
-      setIsProcessing(false);
       setActiveTab('review-extraction');
-    }, 1800);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Extraction failed');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -98,13 +135,13 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
     setIsDragging(false);
     const files = e.dataTransfer.files;
     if (files.length > 0) {
-      simulateOcrProcess(files[0].name, 'quest');
+      void processLabFile(files[0]);
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      simulateOcrProcess(e.target.files[0].name, 'quest');
+      void processLabFile(e.target.files[0]);
     }
   };
 
@@ -118,15 +155,15 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
               Pipeline Stage 01
             </span>
             <span className="font-['JetBrains_Mono'] text-xs text-[#565e74]">
-              WebAssembly In-Memory Ingestion
+              Server RAM ingest · SHA-256 provenance
             </span>
           </div>
           <h1 className="font-['Inter'] text-2xl lg:text-3xl font-bold text-[#0b1c30]">
             Upload Laboratory Blood Panel
           </h1>
           <p className="font-['Inter'] text-sm text-[#3f4850] mt-1 max-w-2xl">
-            Drop Quest Diagnostics, LabCorp, NHS, or any clinical laboratory PDF. The PDF is parsed
-            directly within your browser's WebAssembly sandbox with zero network transmission.
+            Drop a Quest, LabCorp, NHS, or clinic PDF or scan. The server hashes it in RAM, extracts
+            markers, and discards the original. Confirmed values are stored only after you sign off.
           </p>
         </div>
 
@@ -137,10 +174,10 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
           </div>
           <div className="flex flex-col">
             <span className="font-['JetBrains_Mono'] text-xs font-bold text-[#0b1c30]">
-              Zero-Cloud Retention
+              Original not stored
             </span>
             <span className="font-['JetBrains_Mono'] text-[11px] text-[#006947]">
-              0 network bytes transmitted
+              {accountAddress === 'Guest' ? 'Sign in to extract' : `Session ${accountAddress}`}
             </span>
           </div>
         </div>
@@ -191,13 +228,19 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
 
             <div className="pt-4 mt-2 border-t border-[#f1f5f9] w-full flex items-center justify-center gap-6 text-xs text-[#565e74] font-['JetBrains_Mono']">
               <span className="flex items-center gap-1.5">
-                <Cpu className="w-3.5 h-3.5 text-[#006947]" /> WASM Tesseract 2.0
+                <Cpu className="w-3.5 h-3.5 text-[#006947]" /> pdfplumber + Gemini Vision
               </span>
               <span className="flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#006194]" /> In-Memory Isolation
+                <ShieldCheck className="w-3.5 h-3.5 text-[#006194]" /> RAM-only original
               </span>
             </div>
           </div>
+
+          {uploadError && (
+            <div className="bg-[#fff1f2] p-4 rounded-xl border border-[#fecdd3] text-xs text-[#9f1239] font-['Inter']">
+              {uploadError}
+            </div>
+          )}
 
           {/* Processing Simulation Animation */}
           {isProcessing && (
@@ -259,7 +302,7 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
             <div className="flex flex-col gap-3">
               {/* Preset 1: Quest */}
               <button
-                onClick={() => simulateOcrProcess('Quest_Diagnostics_Panel_2025_08.pdf', 'quest')}
+                onClick={() => loadPresetPanel('Quest_Diagnostics_Panel_2025_08.pdf', 'quest')}
                 disabled={isProcessing}
                 className="text-left p-3.5 rounded-lg border border-[#e2e8f0] hover:border-[#006194] hover:bg-[#eff4ff] transition-all bg-[#ffffff] group cursor-pointer flex flex-col gap-1 shadow-2xs"
               >
@@ -279,7 +322,7 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
 
               {/* Preset 2: LabCorp */}
               <button
-                onClick={() => simulateOcrProcess('LabCorp_Requisition_B7719.pdf', 'labcorp')}
+                onClick={() => loadPresetPanel('LabCorp_Requisition_B7719.pdf', 'labcorp')}
                 disabled={isProcessing}
                 className="text-left p-3.5 rounded-lg border border-[#e2e8f0] hover:border-[#006194] hover:bg-[#eff4ff] transition-all bg-[#ffffff] group cursor-pointer flex flex-col gap-1 shadow-2xs"
               >
@@ -299,7 +342,7 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
 
               {/* Preset 3: NHS */}
               <button
-                onClick={() => simulateOcrProcess('NHS_Blood_Sciences_Report_0924.pdf', 'nhs')}
+                onClick={() => loadPresetPanel('NHS_Blood_Sciences_Report_0924.pdf', 'nhs')}
                 disabled={isProcessing}
                 className="text-left p-3.5 rounded-lg border border-[#e2e8f0] hover:border-[#006194] hover:bg-[#eff4ff] transition-all bg-[#ffffff] group cursor-pointer flex flex-col gap-1 shadow-2xs"
               >

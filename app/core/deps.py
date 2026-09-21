@@ -14,12 +14,18 @@ from sqlalchemy.ext.asyncio import (
 from app.core.config import get_settings
 from app.core.security import Argon2SeedHasher, JwtTokenIssuer
 from app.repositories.health import HealthRepository
+from app.repositories.lab_results import LabResultRepository
 from app.repositories.users import UserRepository
 from app.services.accounts import AccountService
+from app.services.extract_sessions import InMemoryExtractSessionStore
 from app.services.health import HealthService
+from app.services.uploads import UploadService
+from app.services.vision import ExtractionProvider, build_extraction_provider
 
 _engine: AsyncEngine | None = None
 _session_factory: async_sessionmaker[AsyncSession] | None = None
+_extract_sessions: InMemoryExtractSessionStore | None = None
+_vision_provider: ExtractionProvider | None = None
 
 
 def get_engine() -> AsyncEngine:
@@ -76,10 +82,50 @@ async def get_account_service(
     )
 
 
+def get_extract_sessions() -> InMemoryExtractSessionStore:
+    """Return the process-wide in-memory extract session store."""
+    global _extract_sessions
+    if _extract_sessions is None:
+        _extract_sessions = InMemoryExtractSessionStore(get_settings().extract_session_ttl_seconds)
+    return _extract_sessions
+
+
+def get_vision_provider() -> ExtractionProvider:
+    """Return the configured Vision provider (Gemini by default)."""
+    global _vision_provider
+    if _vision_provider is None:
+        settings = get_settings()
+        _vision_provider = build_extraction_provider(
+            provider=settings.vision_provider,
+            gemini_api_key=settings.gemini_api_key,
+            gemini_model=settings.gemini_model,
+            claude_api_key=settings.claude_api_key,
+            claude_model=settings.claude_model,
+        )
+    return _vision_provider
+
+
+async def get_upload_service(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> UploadService:
+    """Build the upload service for a request."""
+    settings = get_settings()
+    return UploadService(
+        vision=get_vision_provider(),
+        sessions=get_extract_sessions(),
+        lab_results=LabResultRepository(session),
+        max_upload_bytes=settings.max_upload_bytes,
+    )
+
+
 async def dispose_engine() -> None:
-    """Dispose the engine on shutdown so connections are not leaked."""
-    global _engine, _session_factory
+    """Dispose the engine and RAM extract sessions on shutdown."""
+    global _engine, _session_factory, _extract_sessions, _vision_provider
     if _engine is not None:
         await _engine.dispose()
     _engine = None
     _session_factory = None
+    if _extract_sessions is not None:
+        _extract_sessions.clear()
+    _extract_sessions = None
+    _vision_provider = None

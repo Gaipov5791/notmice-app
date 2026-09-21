@@ -1,0 +1,162 @@
+"""Extract and confirm use-cases. File bytes stay in RAM and are dropped after extract."""
+
+from __future__ import annotations
+
+from datetime import UTC, date, datetime
+from decimal import Decimal
+from typing import Protocol
+from uuid import UUID
+
+import structlog
+
+from app.domain.uploads import (
+    ConfirmedLabResult,
+    EmptyPayloadError,
+    ExtractedPanel,
+    ExtractSession,
+    MappedMarker,
+    NoMarkersError,
+    PayloadTooLargeError,
+    RawLabExtraction,
+    RawMarker,
+    map_marker,
+    parse_collected_at,
+    parser_version_for,
+)
+from app.services.extract_sessions import InMemoryExtractSessionStore
+from app.services.media import sha256_hex, sniff_mime_type
+from app.services.pdf_text import extract_pdf_text, has_selectable_text
+from app.services.vision import ExtractionProvider
+
+logger = structlog.get_logger(__name__)
+
+
+class LabResultStore(Protocol):
+    """Persistence contract used by UploadService.confirm."""
+
+    async def save_confirmed(
+        self,
+        *,
+        user_id: UUID,
+        collected_at: date | None,
+        lab_name: str | None,
+        chronological_age: Decimal | None,
+        parser_version: str,
+        confirmed_at: datetime,
+        document_sha256: str,
+        markers: tuple[MappedMarker, ...],
+    ) -> ConfirmedLabResult:
+        """Insert confirmed rows and provenance."""
+
+
+class UploadService:
+    """In-memory extract plus confirmed persistence."""
+
+    def __init__(
+        self,
+        *,
+        vision: ExtractionProvider,
+        sessions: InMemoryExtractSessionStore,
+        lab_results: LabResultStore,
+        max_upload_bytes: int,
+    ) -> None:
+        self._vision = vision
+        self._sessions = sessions
+        self._lab_results = lab_results
+        self._max_upload_bytes = max_upload_bytes
+
+    async def extract(self, user_id: UUID, payload: bytes) -> ExtractSession:
+        """Hash, parse, and forget the original bytes.
+
+        Args:
+            user_id: Authenticated owner.
+            payload: Complete file in RAM.
+
+        Returns:
+            Extract session whose panel does not include file bytes.
+        """
+        if not payload:
+            raise EmptyPayloadError
+        if len(payload) > self._max_upload_bytes:
+            raise PayloadTooLargeError
+        mime_type = sniff_mime_type(payload)
+        digest = sha256_hex(payload)
+        raw = await self._parse(payload, mime_type)
+        del payload
+        mapped = tuple(map_marker(item) for item in raw.markers)
+        if not mapped:
+            raise NoMarkersError
+        chronological_age = (
+            Decimal(str(raw.chronological_age)) if raw.chronological_age is not None else None
+        )
+        panel = ExtractedPanel(
+            document_sha256=digest,
+            parser_version=parser_version_for(self._vision.name, self._vision.model_id),
+            lab_name=raw.lab_name,
+            collected_at=parse_collected_at(raw.collected_at),
+            chronological_age=chronological_age,
+            markers=mapped,
+        )
+        session = self._sessions.put(user_id, panel)
+        logger.info(
+            "lab_extracted",
+            marker_count=len(mapped),
+            mime_type=mime_type,
+            parser_version=panel.parser_version,
+        )
+        return session
+
+    async def confirm(
+        self,
+        user_id: UUID,
+        extract_token: str,
+        *,
+        lab_name: str | None,
+        collected_at: date | None,
+        chronological_age: Decimal | None,
+        markers: tuple[RawMarker, ...],
+    ) -> ConfirmedLabResult:
+        """Persist edited values and drop the extract session.
+
+        SHA-256 and parser_version always come from the session, never the client.
+
+        Args:
+            user_id: Authenticated owner.
+            extract_token: Token from extract.
+            lab_name: Optional override from review UI.
+            collected_at: Optional override from review UI.
+            chronological_age: Optional override from review UI.
+            markers: Human-edited analyte rows.
+        """
+        session = self._sessions.pop(extract_token, user_id)
+        mapped = tuple(map_marker(item) for item in markers)
+        if not mapped:
+            raise NoMarkersError
+        confirmed_at = datetime.now(UTC)
+        result = await self._lab_results.save_confirmed(
+            user_id=user_id,
+            collected_at=collected_at if collected_at is not None else session.panel.collected_at,
+            lab_name=lab_name if lab_name is not None else session.panel.lab_name,
+            chronological_age=(
+                chronological_age
+                if chronological_age is not None
+                else session.panel.chronological_age
+            ),
+            parser_version=session.panel.parser_version,
+            confirmed_at=confirmed_at,
+            document_sha256=session.panel.document_sha256,
+            markers=mapped,
+        )
+        logger.info(
+            "lab_confirmed",
+            lab_result_id=str(result.lab_result_id),
+            marker_count=result.marker_count,
+        )
+        return result
+
+    async def _parse(self, payload: bytes, mime_type: str) -> RawLabExtraction:
+        """Route text PDFs to pdfplumber+LLM; scans and photos to Vision."""
+        if mime_type == "application/pdf" and has_selectable_text(payload):
+            text = extract_pdf_text(payload)
+            return await self._vision.extract_from_text(text)
+        return await self._vision.extract_from_media(payload, mime_type)

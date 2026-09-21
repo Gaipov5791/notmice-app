@@ -244,6 +244,12 @@ export default function App() {
             onLoadPanel={handleLoadPanel}
             setActiveTab={setActiveTab}
             accountAddress={publicIdLabel}
+            accessToken={account?.accessToken ?? null}
+            isAuthenticated={account !== null}
+            onRequestAuth={() => {
+              setAuthError(null);
+              setIsSeedPhraseModalOpen(true);
+            }}
           />
         )}
 
@@ -253,6 +259,7 @@ export default function App() {
             currentPanel={currentPanel}
             onUpdateBiomarkers={setBiomarkers}
             setActiveTab={setActiveTab}
+            accessToken={account?.accessToken ?? null}
           />
         )}
 

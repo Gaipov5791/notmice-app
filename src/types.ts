@@ -44,6 +44,19 @@ export interface LabPanelData {
   confidenceScores: Record<string, number>;
   verified: boolean;
   hash: string;
+  extractToken?: string;
+  parserVersion?: string;
+  extractedMarkers?: ExtractedMarker[];
+}
+
+export interface ExtractedMarker {
+  rawName: string;
+  canonicalId: string | null;
+  loincCode: string | null;
+  value: number;
+  unit: string;
+  confidence: number;
+  mappingStatus: 'mapped' | 'unmapped';
 }
 
 export interface PhenoAgeCalculation {

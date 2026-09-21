@@ -1,6 +1,7 @@
 """Pydantic schemas shared across API and services."""
 
-from datetime import datetime
+from datetime import date, datetime
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -61,3 +62,65 @@ class AccountCreatedResponse(AccountSessionResponse):
     """Registration payload. ``mnemonic`` is included only on this response."""
 
     mnemonic: str = Field(description="12-word BIP-39 phrase, shown once. Not stored.")
+
+
+class ExtractedMarkerView(BaseModel):
+    """One analyte returned to the review UI."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    raw_name: str
+    canonical_id: str | None
+    loinc_code: str | None
+    value: float
+    unit: str
+    confidence: float
+    mapping_status: str
+
+
+class ExtractResponse(BaseModel):
+    """Extract result. The original file is not included."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    extract_token: str
+    document_sha256: str
+    parser_version: str
+    lab_name: str | None
+    collected_at: date | None
+    chronological_age: float | None
+    markers: list[ExtractedMarkerView]
+
+
+class ConfirmedMarkerInput(BaseModel):
+    """Human-edited analyte row from the review UI."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    raw_name: str = Field(min_length=1, max_length=255)
+    value: float
+    unit: str = Field(min_length=1, max_length=32)
+
+
+class ConfirmRequest(BaseModel):
+    """Confirm payload. Hash and parser version are taken from the extract session."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    extract_token: str = Field(min_length=8, max_length=128)
+    lab_name: str | None = Field(default=None, max_length=255)
+    collected_at: date | None = None
+    chronological_age: float | None = Field(default=None, ge=0, le=120)
+    markers: list[ConfirmedMarkerInput] = Field(min_length=1)
+
+
+class ConfirmResponse(BaseModel):
+    """Persisted lab result after sign-off."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    lab_result_id: UUID
+    document_sha256: str
+    parser_version: str
+    confirmed_at: datetime
+    marker_count: int

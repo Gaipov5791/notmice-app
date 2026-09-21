@@ -19,6 +19,13 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     secret_key: str = "dev-insecure-change-me-not-for-prod"
     access_token_ttl_seconds: int = 43_200
+    vision_provider: str = "gemini"
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-3.8-flash"
+    claude_api_key: str = ""
+    claude_model: str = "claude-sonnet-5"
+    max_upload_bytes: int = 15_728_640
+    extract_session_ttl_seconds: int = 1_800
 
     @property
     def cors_origin_list(self) -> list[str]:

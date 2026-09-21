@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { TabType, LabPanelData } from '../../types';
 import { PHENOAGE_BIOMARKERS } from '../../data/phenoAgeData';
+import { confirmLabExtraction } from '../../api/uploads';
 import {
   CheckSquare,
   CheckCircle2,
@@ -18,12 +19,14 @@ interface ReviewExtractionTabProps {
   currentPanel: LabPanelData;
   onUpdateBiomarkers: (biomarkers: Record<string, number>) => void;
   setActiveTab: (tab: TabType) => void;
+  accessToken: string | null;
 }
 
 export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
   currentPanel,
   onUpdateBiomarkers,
   setActiveTab,
+  accessToken,
 }) => {
   const [localValues, setLocalValues] = useState<Record<string, number>>({
     ...currentPanel.biomarkers,
@@ -41,6 +44,9 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
     wbc: true,
   });
 
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+
   const handleValueChange = (id: string, val: number) => {
     const next = { ...localValues, [id]: val };
     setLocalValues(next);
@@ -52,11 +58,47 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
   };
 
   const handleVerifyAll = () => {
-    const allTrue: Record<string, boolean> = {};
-    PHENOAGE_BIOMARKERS.forEach((b) => (allTrue[b.id] = true));
-    setVerifiedMap(allTrue);
-    onUpdateBiomarkers(localValues);
-    setActiveTab('phenoage-engine');
+    void (async () => {
+      const allTrue: Record<string, boolean> = {};
+      PHENOAGE_BIOMARKERS.forEach((b) => (allTrue[b.id] = true));
+      setVerifiedMap(allTrue);
+      onUpdateBiomarkers(localValues);
+      if (currentPanel.extractToken && accessToken) {
+        setConfirmBusy(true);
+        setConfirmError(null);
+        try {
+          const markers = (currentPanel.extractedMarkers ?? []).map((marker) => ({
+            rawName: marker.rawName,
+            value:
+              marker.canonicalId && localValues[marker.canonicalId] !== undefined
+                ? localValues[marker.canonicalId]
+                : marker.value,
+            unit: marker.unit,
+          }));
+          const fallback =
+            markers.length > 0
+              ? markers
+              : PHENOAGE_BIOMARKERS.map((bio) => ({
+                  rawName: bio.name,
+                  value: localValues[bio.id],
+                  unit: bio.unit,
+                }));
+          await confirmLabExtraction(accessToken, {
+            extractToken: currentPanel.extractToken,
+            labName: currentPanel.labName,
+            collectedAt: currentPanel.testDate,
+            chronologicalAge: currentPanel.chronologicalAge,
+            markers: fallback,
+          });
+        } catch (err) {
+          setConfirmError(err instanceof Error ? err.message : 'Confirm failed');
+          setConfirmBusy(false);
+          return;
+        }
+        setConfirmBusy(false);
+      }
+      setActiveTab('phenoage-engine');
+    })();
   };
 
   const activeBio = PHENOAGE_BIOMARKERS.find((b) => b.id === activeSnippetKey);
@@ -83,7 +125,11 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
               {currentPanel.fileName ?? 'Quest_Diagnostics_Panel_2025_08.pdf'}
             </strong>{' '}
             • Lab: {currentPanel.labName} • Test Date: {currentPanel.testDate}
+            {currentPanel.hash.length === 64 ? ` • SHA-256 ${currentPanel.hash.slice(0, 12)}…` : ''}
           </p>
+          {confirmError && (
+            <p className="font-['Inter'] text-xs text-[#9f1239] mt-2">{confirmError}</p>
+          )}
         </div>
 
         {/* Global Action */}
@@ -97,7 +143,8 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
           </button>
           <button
             onClick={handleVerifyAll}
-            className="flex items-center gap-2 px-5 py-2.5 rounded font-['Inter'] text-xs font-bold bg-[#006194] hover:bg-[#007bb9] text-[#ffffff] shadow-sm transition-all cursor-pointer"
+            disabled={confirmBusy}
+            className="flex items-center gap-2 px-5 py-2.5 rounded font-['Inter'] text-xs font-bold bg-[#006194] hover:bg-[#007bb9] text-[#ffffff] shadow-sm transition-all cursor-pointer disabled:opacity-60"
           >
             <CheckCircle2 className="w-4 h-4" />
             <span>Verify All & Compute PhenoAge</span>
@@ -354,7 +401,8 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
 
             <button
               onClick={handleVerifyAll}
-              className="w-full sm:w-auto px-6 py-2.5 bg-[#006194] hover:bg-[#007bb9] text-white font-['Inter'] text-xs font-bold rounded shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
+              disabled={confirmBusy}
+              className="w-full sm:w-auto px-6 py-2.5 bg-[#006194] hover:bg-[#007bb9] text-white font-['Inter'] text-xs font-bold rounded shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60"
             >
               <span>Verify All & Compute PhenoAge</span>
               <ArrowRight className="w-4 h-4" />
