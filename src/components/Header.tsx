@@ -9,6 +9,7 @@ interface HeaderProps {
   onOpenTerminal: () => void;
   onOpenSeedPhrase: () => void;
   accountAddress: string;
+  isAuthenticated: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,6 +18,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenTerminal,
   onOpenSeedPhrase,
   accountAddress,
+  isAuthenticated,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -90,7 +92,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Ephemeral in-memory key */}
           <button
             onClick={onOpenSeedPhrase}
-            title="Click to view ephemeral seed phrase"
+            title={isAuthenticated ? 'Account recovery phrase' : 'Sign in or create an account'}
             className="hidden md:flex items-center gap-2 bg-[#eff4ff] hover:bg-[#e5eeff] px-2.5 py-1.5 rounded border border-[#dce9ff] transition-colors cursor-pointer"
           >
             <span className="w-2 h-2 rounded-full bg-[#00855b] animate-pulse"></span>
@@ -98,7 +100,7 @@ export const Header: React.FC<HeaderProps> = ({
               {accountAddress}
             </span>
             <span className="font-['JetBrains_Mono'] text-[11px] text-[#006947] font-semibold hidden lg:inline bg-[#4edea3]/20 px-1.5 py-0.5 rounded">
-              In-Memory Only
+              {isAuthenticated ? 'Signed in' : 'Guest'}
             </span>
           </button>
 
@@ -165,7 +167,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="pt-2 mt-2 border-t border-[#e2e8f0] flex items-center justify-between text-xs text-[#565e74]">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-[#00855b]"></span>
-                In-Memory WebWorker Isolate
+                {isAuthenticated ? 'Signed in' : 'Guest'}
               </span>
               <span className="font-mono">{accountAddress}</span>
             </div>

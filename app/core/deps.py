@@ -12,7 +12,10 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.core.config import get_settings
+from app.core.security import Argon2SeedHasher, JwtTokenIssuer
 from app.repositories.health import HealthRepository
+from app.repositories.users import UserRepository
+from app.services.accounts import AccountService
 from app.services.health import HealthService
 
 _engine: AsyncEngine | None = None
@@ -43,10 +46,15 @@ def get_session_factory() -> async_sessionmaker[AsyncSession]:
 
 
 async def get_session() -> AsyncIterator[AsyncSession]:
-    """Yield a request-scoped async session."""
+    """Yield a request-scoped async session and commit on success."""
     factory = get_session_factory()
     async with factory() as session:
-        yield session
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
 
 
 async def get_health_service(
@@ -54,6 +62,18 @@ async def get_health_service(
 ) -> HealthService:
     """Build the health service for a request."""
     return HealthService(HealthRepository(session))
+
+
+async def get_account_service(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> AccountService:
+    """Build the account service for a request."""
+    settings = get_settings()
+    return AccountService(
+        users=UserRepository(session),
+        hasher=Argon2SeedHasher(settings.secret_key),
+        tokens=JwtTokenIssuer(settings.secret_key, settings.access_token_ttl_seconds),
+    )
 
 
 async def dispose_engine() -> None:

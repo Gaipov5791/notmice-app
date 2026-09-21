@@ -30,6 +30,7 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-notmice}:${POSTGRES_PASSWORD:-notmice}@postgres:5432/${POSTGRES_DB:-notmice}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:8080}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      SECRET_KEY: ${SECRET_KEY:-dev-insecure-change-me-not-for-prod}
     depends_on:
       postgres:
         condition: service_healthy

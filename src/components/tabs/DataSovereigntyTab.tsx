@@ -1,25 +1,21 @@
 import React, { useState } from 'react';
 import { TabType, HistoricalTestRecord } from '../../types';
 import {
-  ShieldCheck,
   Download,
   Share2,
   Trash2,
   Lock,
-  Globe,
   FileCode,
-  Check,
-  Copy,
-  Cpu,
   EyeOff,
-  Sparkles,
   FlaskConical,
 } from 'lucide-react';
 
 interface DataSovereigntyTabProps {
   history: HistoricalTestRecord[];
   accountAddress: string;
-  seedPhrase: string[];
+  isAuthenticated: boolean;
+  isPublic: boolean;
+  onTogglePublic: (isPublic: boolean) => void;
   onPurgeMemory: () => void;
   onOpenSeedPhrase: () => void;
   setActiveTab: (tab: TabType) => void;
@@ -28,16 +24,14 @@ interface DataSovereigntyTabProps {
 export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
   history,
   accountAddress,
-  seedPhrase,
+  isAuthenticated,
+  isPublic,
+  onTogglePublic,
   onPurgeMemory,
   onOpenSeedPhrase,
   setActiveTab,
 }) => {
-  const [optInShare, setOptInShare] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState<string | null>(null);
-  const [copiedIpfs, setCopiedIpfs] = useState(false);
-
-  const ipfsCid = 'bafybeihdwdcefgh4dqkjv67ndjswq4knbdnla5n35m6g6q67219';
 
   const downloadJsonVault = () => {
     const dataStr =
@@ -90,12 +84,6 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
 
     setDownloadSuccess('csv');
     setTimeout(() => setDownloadSuccess(null), 3000);
-  };
-
-  const copyCid = () => {
-    navigator.clipboard.writeText(ipfsCid);
-    setCopiedIpfs(true);
-    setTimeout(() => setCopiedIpfs(false), 2000);
   };
 
   return (
@@ -204,17 +192,18 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
                 onClick={onOpenSeedPhrase}
                 className="text-xs text-[#006194] hover:underline font-semibold cursor-pointer"
               >
-                View 12 Words
+                Open account
               </button>
             </div>
             <p className="text-xs text-[#565e74] leading-relaxed">
-              Your session is anchored by an in-memory keypair. When you close this browser tab, all
-              unencrypted clinical records vanish permanently from computer memory unless you hold
-              your 12-word seed.
+              Sign in with your 12-word BIP-39 recovery phrase. The server stores only an argon2id
+              hash of the phrase, never email, phone, or the words themselves.
             </p>
             <div className="flex items-center justify-between p-2.5 bg-[#f8f9ff] rounded border border-[#e2e8f0] font-['JetBrains_Mono'] text-xs text-[#565e74]">
-              <span>Active Address: {accountAddress}</span>
-              <span className="text-[#006947] font-semibold">Protected</span>
+              <span>Active ID: {accountAddress}</span>
+              <span className="text-[#006947] font-semibold">
+                {isAuthenticated ? 'Authenticated' : 'Guest'}
+              </span>
             </div>
           </div>
         </div>
@@ -263,14 +252,16 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
                   Contribute Vector to Open Registry
                 </span>
                 <span className="text-[11px] text-[#565e74]">
-                  Push cryptographic hash and anonymized vector to IPFS cohort
+                  {isAuthenticated
+                    ? 'Write confirmed biomarker rows to the public dataset when you opt in'
+                    : 'Sign in first, then opt in to the public dataset'}
                 </span>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={optInShare}
-                  onChange={(e) => setOptInShare(e.target.checked)}
+                  checked={isPublic}
+                  onChange={(e) => onTogglePublic(e.target.checked)}
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-[#cbd5e1] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[#cbd5e1] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00855b]"></div>
@@ -278,20 +269,15 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
             </div>
 
             {/* IPFS Hash Preview */}
-            {optInShare && (
+            {isPublic && (
               <div className="p-3 bg-[#f8f9ff] rounded border border-[#dce9ff] flex flex-col gap-1.5 text-xs animate-in fade-in">
                 <span className="font-['JetBrains_Mono'] text-[#006947] font-semibold">
-                  IPFS Research CID Fingerprint:
+                  Public sharing is on
                 </span>
-                <div className="flex items-center justify-between font-['JetBrains_Mono'] text-[11px] bg-[#ffffff] p-2 rounded border border-[#e2e8f0]">
-                  <span className="truncate max-w-[280px] sm:max-w-xs">{ipfsCid}</span>
-                  <button
-                    onClick={copyCid}
-                    className="text-[#006194] hover:underline font-semibold ml-2 shrink-0 cursor-pointer"
-                  >
-                    {copiedIpfs ? 'Copied' : 'Copy CID'}
-                  </button>
-                </div>
+                <p className="text-[11px] text-[#565e74] leading-relaxed">
+                  Confirmed biomarker rows for this account will be eligible for the public dataset
+                  API once that endpoint ships. Original lab files are never stored.
+                </p>
               </div>
             )}
           </div>

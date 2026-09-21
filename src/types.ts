@@ -74,3 +74,10 @@ export interface HistoricalTestRecord {
   biomarkers: Record<string, number>;
   hash: string;
 }
+
+export interface AccountState {
+  publicId: string;
+  isPublic: boolean;
+  createdAt: string;
+  accessToken: string;
+}

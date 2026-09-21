@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://notmice:notmice@localhost:5432/notmice"
     cors_origins: str = "http://localhost:3000,http://localhost:8080"
     log_level: str = "INFO"
+    secret_key: str = "dev-insecure-change-me-not-for-prod"
+    access_token_ttl_seconds: int = 43_200
 
     @property
     def cors_origin_list(self) -> list[str]:

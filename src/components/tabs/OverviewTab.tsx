@@ -26,6 +26,7 @@ interface OverviewTabProps {
   onUpdateBiomarkers: (updated: Record<string, number>) => void;
   phenoAge: number;
   chronologicalAge: number;
+  isAuthenticated: boolean;
 }
 
 export const OverviewTab: React.FC<OverviewTabProps> = ({
@@ -36,6 +37,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   onUpdateBiomarkers,
   phenoAge,
   chronologicalAge,
+  isAuthenticated,
 }) => {
   const alb = biomarkers['albumin'] ?? 46.0;
   const crp = biomarkers['crp'] ?? 0.8;
@@ -85,7 +87,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 id="btn-seed"
               >
                 <Key className="w-4 h-4" />
-                <span>Get Started with Seed Phrase</span>
+                <span>{isAuthenticated ? 'Open Account' : 'Get Started with Seed Phrase'}</span>
               </button>
               <button
                 onClick={() => setActiveTab('data-sovereignty-public-sharing')}

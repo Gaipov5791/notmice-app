@@ -1,7 +1,17 @@
-import React, { useState, useMemo } from 'react';
-import { TabType, LabPanelData, HistoricalTestRecord } from './types';
+import React, { useEffect, useMemo, useState } from 'react';
+import { TabType, LabPanelData, HistoricalTestRecord, AccountState } from './types';
 import { INITIAL_BIOMARKERS, INITIAL_HISTORY, PRESET_LAB_PANELS } from './data/phenoAgeData';
 import { calculatePhenoAge, generateCryptoHash } from './utils/phenoAgeMath';
+import {
+  clearStoredToken,
+  createAccount,
+  fetchCurrentAccount,
+  loginWithMnemonic,
+  logoutAccount,
+  readStoredToken,
+  storeToken,
+  updateShareSettings,
+} from './api/accounts';
 import { Header } from './components/Header';
 import { StatusRibbon } from './components/StatusRibbon';
 import { OverviewTab } from './components/tabs/OverviewTab';
@@ -15,28 +25,15 @@ import { SeedPhraseModal } from './components/SeedPhraseModal';
 import { TerminalModal } from './components/TerminalModal';
 import { Footer } from './components/Footer';
 
-const INITIAL_MNEMONIC = [
-  'quantum',
-  'cellular',
-  'longevity',
-  'telomere',
-  'biomarker',
-  'hepatic',
-  'hazard',
-  'matrix',
-  'isolate',
-  'gompertz',
-  'cipher',
-  'sovereign',
-];
-
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('overview-landing');
   const [chronologicalAge, setChronologicalAge] = useState<number>(42.0);
   const [biomarkers, setBiomarkers] = useState<Record<string, number>>(INITIAL_BIOMARKERS);
   const [history, setHistory] = useState<HistoricalTestRecord[]>(INITIAL_HISTORY);
-  const [seedPhrase, setSeedPhrase] = useState<string[]>(INITIAL_MNEMONIC);
-  const [accountAddress, setAccountAddress] = useState<string>('0x8f4c...b921');
+  const [account, setAccount] = useState<AccountState | null>(null);
+  const [revealedMnemonic, setRevealedMnemonic] = useState<string[] | null>(null);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // Modals state
   const [isProofModalOpen, setIsProofModalOpen] = useState(false);
@@ -57,6 +54,34 @@ export default function App() {
     verified: true,
     hash: '0x8fbc...19a4',
   });
+
+  useEffect(() => {
+    const token = readStoredToken();
+    if (!token) {
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const current = await fetchCurrentAccount(token);
+        if (!cancelled) {
+          setAccount({
+            publicId: current.publicId,
+            isPublic: current.isPublic,
+            createdAt: current.createdAt,
+            accessToken: token,
+          });
+        }
+      } catch {
+        clearStoredToken();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const publicIdLabel = account?.publicId ?? 'Guest';
 
   // Dynamic real-time calculation using Levine 2018 algorithm
   const phenoAgeCalculation = useMemo(() => {
@@ -97,31 +122,83 @@ export default function App() {
     setHistory((prev) => prev.filter((h) => h.id !== id));
   };
 
-  const handleRegenerateKeys = () => {
-    const words = [
-      'solitary',
-      'vector',
-      'mitochondria',
-      'glycan',
-      'serum',
-      'protocol',
-      'epigenome',
-      'somatic',
-      'autophagy',
-      'frailty',
-      'longevity',
-      'entropy',
-    ];
-    setSeedPhrase(words);
-    const randHex = Math.random().toString(16).slice(2, 6);
-    setAccountAddress(`0x${randHex}...${Math.random().toString(16).slice(2, 6)}`);
-  };
-
   const handlePurgeMemory = () => {
     setBiomarkers(INITIAL_BIOMARKERS);
     setChronologicalAge(42.0);
     setHistory(INITIAL_HISTORY.slice(0, 2));
-    handleRegenerateKeys();
+  };
+
+  const handleCreateAccount = async () => {
+    setAuthBusy(true);
+    setAuthError(null);
+    try {
+      const created = await createAccount();
+      storeToken(created.accessToken);
+      setAccount({
+        publicId: created.publicId,
+        isPublic: created.isPublic,
+        createdAt: created.createdAt,
+        accessToken: created.accessToken,
+      });
+      setRevealedMnemonic(created.mnemonic.trim().split(/\s+/));
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : 'Could not create account');
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const handleLogin = async (mnemonic: string) => {
+    setAuthBusy(true);
+    setAuthError(null);
+    try {
+      const session = await loginWithMnemonic(mnemonic);
+      storeToken(session.accessToken);
+      setAccount({
+        publicId: session.publicId,
+        isPublic: session.isPublic,
+        createdAt: session.createdAt,
+        accessToken: session.accessToken,
+      });
+      setRevealedMnemonic(null);
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : 'Could not sign in');
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    const token = account?.accessToken;
+    setAuthBusy(true);
+    setAuthError(null);
+    try {
+      if (token) {
+        await logoutAccount(token);
+      }
+    } catch {
+      // Client still signs out even if the API is unreachable.
+    } finally {
+      clearStoredToken();
+      setAccount(null);
+      setRevealedMnemonic(null);
+      setAuthBusy(false);
+    }
+  };
+
+  const handleTogglePublic = async (isPublic: boolean) => {
+    if (!account) {
+      setIsSeedPhraseModalOpen(true);
+      return;
+    }
+    const previous = account.isPublic;
+    setAccount({ ...account, isPublic });
+    try {
+      const updated = await updateShareSettings(account.accessToken, isPublic);
+      setAccount({ ...account, isPublic: updated.isPublic });
+    } catch {
+      setAccount({ ...account, isPublic: previous });
+    }
   };
 
   return (
@@ -131,8 +208,12 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenTerminal={() => setIsTerminalModalOpen(true)}
-        onOpenSeedPhrase={() => setIsSeedPhraseModalOpen(true)}
-        accountAddress={accountAddress}
+        onOpenSeedPhrase={() => {
+          setAuthError(null);
+          setIsSeedPhraseModalOpen(true);
+        }}
+        accountAddress={publicIdLabel}
+        isAuthenticated={account !== null}
       />
 
       {/* Main Content Pane */}
@@ -144,12 +225,16 @@ export default function App() {
         {activeTab === 'overview-landing' && (
           <OverviewTab
             setActiveTab={setActiveTab}
-            onOpenSeedPhrase={() => setIsSeedPhraseModalOpen(true)}
+            onOpenSeedPhrase={() => {
+              setAuthError(null);
+              setIsSeedPhraseModalOpen(true);
+            }}
             onOpenProofModal={() => setIsProofModalOpen(true)}
             biomarkers={biomarkers}
             onUpdateBiomarkers={setBiomarkers}
             phenoAge={phenoAgeCalculation.phenoAge}
             chronologicalAge={chronologicalAge}
+            isAuthenticated={account !== null}
           />
         )}
 
@@ -158,7 +243,7 @@ export default function App() {
           <UploadLabTab
             onLoadPanel={handleLoadPanel}
             setActiveTab={setActiveTab}
-            accountAddress={accountAddress}
+            accountAddress={publicIdLabel}
           />
         )}
 
@@ -200,10 +285,15 @@ export default function App() {
         {activeTab === 'data-sovereignty-public-sharing' && (
           <DataSovereigntyTab
             history={history}
-            accountAddress={accountAddress}
-            seedPhrase={seedPhrase}
+            accountAddress={publicIdLabel}
+            isAuthenticated={account !== null}
+            isPublic={account?.isPublic ?? false}
+            onTogglePublic={handleTogglePublic}
             onPurgeMemory={handlePurgeMemory}
-            onOpenSeedPhrase={() => setIsSeedPhraseModalOpen(true)}
+            onOpenSeedPhrase={() => {
+              setAuthError(null);
+              setIsSeedPhraseModalOpen(true);
+            }}
             setActiveTab={setActiveTab}
           />
         )}
@@ -226,17 +316,28 @@ export default function App() {
       <SeedPhraseModal
         isOpen={isSeedPhraseModalOpen}
         onClose={() => setIsSeedPhraseModalOpen(false)}
-        seedPhrase={seedPhrase}
-        accountAddress={accountAddress}
-        onRegenerateKeys={handleRegenerateKeys}
-        onPurgeMemory={handlePurgeMemory}
+        publicId={account?.publicId ?? null}
+        revealedMnemonic={revealedMnemonic}
+        isAuthenticated={account !== null}
+        isBusy={authBusy}
+        error={authError}
+        onCreateAccount={() => {
+          void handleCreateAccount();
+        }}
+        onLogin={(mnemonic) => {
+          void handleLogin(mnemonic);
+        }}
+        onLogout={() => {
+          void handleLogout();
+        }}
+        onConfirmPhraseSaved={() => setRevealedMnemonic(null)}
       />
 
       {/* WebAssembly Terminal Modal */}
       <TerminalModal
         isOpen={isTerminalModalOpen}
         onClose={() => setIsTerminalModalOpen(false)}
-        accountAddress={accountAddress}
+        accountAddress={publicIdLabel}
         phenoAge={phenoAgeCalculation.phenoAge}
       />
     </div>
