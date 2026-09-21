@@ -1,0 +1,43 @@
+name: backend
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: notmice
+          POSTGRES_PASSWORD: notmice
+          POSTGRES_DB: notmice
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U notmice -d notmice"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+asyncpg://notmice:notmice@localhost:5432/notmice
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install backend
+        run: pip install -e ".[dev]"
+      - name: Ruff lint
+        run: ruff check app
+      - name: Ruff format
+        run: ruff format --check app
+      - name: Mypy strict
+        run: mypy app
+      - name: Migrate
+        run: alembic upgrade head
+      - name: Pytest
+        run: pytest

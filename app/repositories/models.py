@@ -1,0 +1,170 @@
+"""SQLAlchemy ORM tables for the Phase 2 minimum schema."""
+
+from __future__ import annotations
+
+import uuid
+from datetime import date, datetime
+from decimal import Decimal
+
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Date,
+    DateTime,
+    ForeignKey,
+    Numeric,
+    String,
+    Text,
+    Uuid,
+    func,
+)
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+from app.domain.enums import MappingStatus
+
+
+class Base(DeclarativeBase):
+    """Declarative base for Alembic metadata."""
+
+
+class User(Base):
+    """Pseudonymous participant. No name, date of birth, or patient number."""
+
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    public_id: Mapped[str] = mapped_column(String(32), unique=True, index=True)
+    seed_phrase_hash: Mapped[str | None] = mapped_column(Text, unique=True, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    lab_results: Mapped[list[LabResult]] = relationship(back_populates="user")
+    share_settings: Mapped[ShareSettings | None] = relationship(back_populates="user")
+
+
+class LabResult(Base):
+    """One confirmed (or pending) laboratory panel belonging to a user."""
+
+    __tablename__ = "lab_results"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    collected_at: Mapped[date | None] = mapped_column(Date, nullable=True)
+    lab_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    chronological_age: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
+    parser_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    user: Mapped[User] = relationship(back_populates="lab_results")
+    biomarkers: Mapped[list[Biomarker]] = relationship(back_populates="lab_result")
+    provenance: Mapped[Provenance | None] = relationship(back_populates="lab_result")
+
+
+class Biomarker(Base):
+    """A single extracted or confirmed analyte row."""
+
+    __tablename__ = "biomarkers"
+    __table_args__ = (
+        CheckConstraint(
+            "mapping_status IN ('mapped', 'unmapped')",
+            name="ck_biomarkers_mapping_status",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    lab_result_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("lab_results.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    loinc_code: Mapped[str | None] = mapped_column(String(32), index=True, nullable=True)
+    raw_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    canonical_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    value: Mapped[Decimal] = mapped_column(Numeric(14, 6), nullable=False)
+    unit: Mapped[str] = mapped_column(String(32), nullable=False)
+    mapping_status: Mapped[str] = mapped_column(
+        String(16),
+        default=MappingStatus.UNMAPPED.value,
+        index=True,
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    lab_result: Mapped[LabResult] = relationship(back_populates="biomarkers")
+
+
+class Provenance(Base):
+    """Origin metadata for a lab result. Stores SHA-256 of the original file, never the file."""
+
+    __tablename__ = "provenance"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    lab_result_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("lab_results.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+    )
+    entered_by_user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    document_sha256: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    parser_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    lab_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    collected_at: Mapped[date | None] = mapped_column(Date, nullable=True)
+    confirmed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    lab_result: Mapped[LabResult] = relationship(back_populates="provenance")
+
+
+class ShareSettings(Base):
+    """Opt-in public sharing flag. Default is private."""
+
+    __tablename__ = "share_settings"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+    )
+    is_public: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    user: Mapped[User] = relationship(back_populates="share_settings")
