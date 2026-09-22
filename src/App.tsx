@@ -343,7 +343,6 @@ export default function App() {
         {/* Tab 6: Data Sovereignty & Public Sharing */}
         {activeTab === 'data-sovereignty-public-sharing' && (
           <DataSovereigntyTab
-            history={history}
             accountAddress={publicIdLabel}
             isAuthenticated={account !== null}
             isPublic={account?.isPublic ?? false}

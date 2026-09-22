@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.accounts import router as accounts_router
 from app.api.dataset import router as dataset_router
+from app.api.exports import router as exports_router
 from app.api.health import router as health_router
 from app.api.phenoage import router as phenoage_router
 from app.api.uploads import router as uploads_router
@@ -41,7 +42,8 @@ def create_app() -> FastAPI:
         license_info={"name": "AGPL-3.0-or-later"},
         description=(
             "Read-only public dataset routes return anonymized opt-in biomarker rows. "
-            "They do not accept writes."
+            "CSV, Parquet, and the datasheet are CC0-1.0 snapshots of those rows. "
+            "These routes do not accept writes."
         ),
     )
     application.add_middleware(
@@ -56,6 +58,7 @@ def create_app() -> FastAPI:
     application.include_router(uploads_router)
     application.include_router(phenoage_router)
     application.include_router(dataset_router)
+    application.include_router(exports_router)
     return application
 
 

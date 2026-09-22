@@ -123,6 +123,31 @@ export async function fetchPublicDataset(
   };
 }
 
+export type PublicExportKind = 'csv' | 'parquet' | 'datasheet';
+
+const PUBLIC_EXPORTS: Record<PublicExportKind, { path: string; filename: string }> = {
+  csv: { path: '/api/v1/dataset.csv', filename: 'notmice-public-biomarkers.csv' },
+  parquet: { path: '/api/v1/dataset.parquet', filename: 'notmice-public-biomarkers.parquet' },
+  datasheet: { path: '/api/v1/dataset/datasheet', filename: 'notmice-dataset-datasheet.md' },
+};
+
+export async function downloadPublicDatasetExport(kind: PublicExportKind): Promise<void> {
+  const spec = PUBLIC_EXPORTS[kind];
+  const response = await fetch(apiUrl(spec.path));
+  if (!response.ok) {
+    throw new DatasetRequestError(response.status);
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = spec.filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 export async function fetchPublicTimeseries(
   publicId: string,
   signal?: AbortSignal,

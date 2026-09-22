@@ -327,7 +327,10 @@ async def test_openapi_is_3_1_and_dataset_is_get_only() -> None:
     assert spec["openapi"] == "3.1.0"
     dataset_ops = spec["paths"]["/api/v1/dataset"]
     series_ops = spec["paths"]["/api/v1/profiles/{public_id}/timeseries"]
-    for operations in (dataset_ops, series_ops):
+    csv_ops = spec["paths"]["/api/v1/dataset.csv"]
+    parquet_ops = spec["paths"]["/api/v1/dataset.parquet"]
+    datasheet_ops = spec["paths"]["/api/v1/dataset/datasheet"]
+    for operations in (dataset_ops, series_ops, csv_ops, parquet_ops, datasheet_ops):
         assert "get" in operations
         for method in ("post", "put", "patch", "delete"):
             assert method not in operations

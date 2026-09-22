@@ -20,6 +20,7 @@ from app.repositories.lab_results import LabResultRepository
 from app.repositories.users import UserRepository
 from app.services.accounts import AccountService
 from app.services.dataset import DatasetService
+from app.services.export import ExportService
 from app.services.extract_sessions import InMemoryExtractSessionStore
 from app.services.health import HealthService
 from app.services.uploads import UploadService
@@ -126,6 +127,13 @@ async def get_dataset_service(
 ) -> DatasetService:
     """Build the public dataset service for a request."""
     return DatasetService(DatasetRepository(session))
+
+
+async def get_export_service(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> ExportService:
+    """Build the CC0 export service for a request. It reads the same public store."""
+    return ExportService(DatasetRepository(session))
 
 
 async def get_upload_service(

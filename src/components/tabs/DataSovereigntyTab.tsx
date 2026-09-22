@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { TabType, HistoricalTestRecord } from '../../types';
+import { TabType } from '../../types';
 import {
   DatasetRequestError,
+  downloadPublicDatasetExport,
   fetchPublicDataset,
   fetchPublicTimeseries,
   PublicDatasetPage,
+  PublicExportKind,
   PublicTimeseries,
 } from '../../api/dataset';
 import {
@@ -18,7 +20,6 @@ import {
 } from 'lucide-react';
 
 interface DataSovereigntyTabProps {
-  history: HistoricalTestRecord[];
   accountAddress: string;
   isAuthenticated: boolean;
   isPublic: boolean;
@@ -29,7 +30,6 @@ interface DataSovereigntyTabProps {
 }
 
 export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
-  history,
   accountAddress,
   isAuthenticated,
   isPublic,
@@ -38,7 +38,9 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
   onOpenSeedPhrase,
   setActiveTab,
 }) => {
-  const [downloadSuccess, setDownloadSuccess] = useState<string | null>(null);
+  const [exportKind, setExportKind] = useState<PublicExportKind | null>(null);
+  const [exportSuccess, setExportSuccess] = useState<PublicExportKind | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [datasetReload, setDatasetReload] = useState(0);
   const [datasetPage, setDatasetPage] = useState<PublicDatasetPage | null>(null);
   const [datasetError, setDatasetError] = useState<string | null>(null);
@@ -101,57 +103,26 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
     return () => controller.abort();
   }, [accountAddress, isPublic, datasetReload]);
 
-  const downloadJsonVault = () => {
-    const dataStr =
-      'data:text/json;charset=utf-8,' +
-      encodeURIComponent(
-        JSON.stringify(
-          {
-            protocol: 'NotMice-Research-v1.4',
-            account: accountAddress,
-            exportTimestamp: new Date().toISOString(),
-            records: history,
-            anonymized: true,
-          },
-          null,
-          2
-        )
-      );
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `NotMice_Vault_${Date.now()}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-
-    setDownloadSuccess('json');
-    setTimeout(() => setDownloadSuccess(null), 3000);
-  };
-
-  const downloadCsv = () => {
-    let csv =
-      'Date,Lab,ChronologicalAge,PhenoAge,AgeDelta,Albumin,Creatinine,Glucose,CRP,Lymphocytes,MCV,RDW,ALP,WBC\n';
-    history.forEach((h) => {
-      csv += `${h.date},"${h.labSource}",${h.chronologicalAge},${h.phenoAge},${h.delta},${
-        h.biomarkers.albumin ?? 0
-      },${h.biomarkers.creatinine ?? 0},${h.biomarkers.glucose ?? 0},${h.biomarkers.crp ?? 0},${
-        h.biomarkers.lymphocyte ?? 0
-      },${h.biomarkers.mcv ?? 0},${h.biomarkers.rdw ?? 0},${h.biomarkers.alp ?? 0},${
-        h.biomarkers.wbc ?? 0
-      }\n`;
-    });
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `NotMice_Biomarkers_${Date.now()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    setDownloadSuccess('csv');
-    setTimeout(() => setDownloadSuccess(null), 3000);
+  const downloadExport = (kind: PublicExportKind) => {
+    setExportError(null);
+    setExportKind(kind);
+    void downloadPublicDatasetExport(kind)
+      .then(() => {
+        setExportSuccess(kind);
+        setExportKind(null);
+        window.setTimeout(() => {
+          setExportSuccess((current) => (current === kind ? null : current));
+        }, 3000);
+      })
+      .catch((err: unknown) => {
+        setExportKind(null);
+        setExportSuccess(null);
+        setExportError(
+          err instanceof DatasetRequestError
+            ? `Export failed (${err.status}).`
+            : 'The public dataset export did not respond.',
+        );
+      });
   };
 
   return (
@@ -196,54 +167,82 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
             <div className="flex items-center justify-between">
               <span className="font-['Inter'] text-base font-bold text-[#0b1c30] flex items-center gap-2">
                 <Download className="w-5 h-5 text-[#006194]" />
-                Zero-Knowledge Data Exports
+                Public dataset export
               </span>
               <span className="font-['JetBrains_Mono'] text-xs bg-[#eff4ff] text-[#006194] px-2 py-0.5 rounded font-semibold">
-                Client-Side Generated
+                CC0-1.0
               </span>
             </div>
 
             <p className="font-['Inter'] text-xs text-[#565e74] leading-relaxed">
-              Export your longitudinal biomarkers in machine-readable open formats. These files can be
-              imported into statistical packages (R, Python pandas) or stored on cold offline drives.
+              CSV, Parquet, and the datasheet are built on the server from opted-in rows in Postgres.
+              Names, dates of birth, and internal ids are not in these files.
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              {/* JSON Vault Download */}
-              <button
-                onClick={downloadJsonVault}
-                className="p-4 rounded-lg border border-[#e2e8f0] hover:border-[#006194] hover:bg-[#eff4ff] transition-all flex flex-col gap-1 text-left cursor-pointer group"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-['Inter'] text-xs font-bold text-[#0b1c30] group-hover:text-[#006194]">
-                    Complete JSON Vault
-                  </span>
-                  <FileCode className="w-4 h-4 text-[#006194]" />
-                </div>
-                <span className="text-[11px] text-[#565e74]">
-                  Full structured state with LOINC metadata & proof hashes.
-                </span>
-                <span className="text-[10px] text-[#006947] font-semibold mt-2">
-                  {downloadSuccess === 'json' ? 'Downloaded!' : 'Download .json'}
-                </span>
-              </button>
+            {exportError && (
+              <p className="text-xs text-[#ba1a1a]" role="alert">
+                {exportError}
+              </p>
+            )}
 
-              {/* CSV / Parquet Download */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
               <button
-                onClick={downloadCsv}
-                className="p-4 rounded-lg border border-[#e2e8f0] hover:border-[#006194] hover:bg-[#eff4ff] transition-all flex flex-col gap-1 text-left cursor-pointer group"
+                type="button"
+                onClick={() => downloadExport('csv')}
+                disabled={exportKind !== null}
+                className="p-4 rounded-lg border border-[#e2e8f0] hover:border-[#006194] hover:bg-[#eff4ff] transition-all flex flex-col gap-1 text-left cursor-pointer group disabled:opacity-60"
               >
                 <div className="flex items-center justify-between">
                   <span className="font-['Inter'] text-xs font-bold text-[#0b1c30] group-hover:text-[#006194]">
-                    Parquet / CSV Table
+                    CSV
                   </span>
                   <Download className="w-4 h-4 text-[#006947]" />
                 </div>
                 <span className="text-[11px] text-[#565e74]">
-                  Tabular timeseries compatible with R, Python, and Excel.
+                  One row per confirmed analyte.
                 </span>
                 <span className="text-[10px] text-[#006947] font-semibold mt-2">
-                  {downloadSuccess === 'csv' ? 'Downloaded!' : 'Download .csv'}
+                  {exportSuccess === 'csv' ? 'Downloaded!' : 'Download .csv'}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => downloadExport('parquet')}
+                disabled={exportKind !== null}
+                className="p-4 rounded-lg border border-[#e2e8f0] hover:border-[#006194] hover:bg-[#eff4ff] transition-all flex flex-col gap-1 text-left cursor-pointer group disabled:opacity-60"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-['Inter'] text-xs font-bold text-[#0b1c30] group-hover:text-[#006194]">
+                    Parquet
+                  </span>
+                  <Download className="w-4 h-4 text-[#006947]" />
+                </div>
+                <span className="text-[11px] text-[#565e74]">
+                  Columnar file for R and Python.
+                </span>
+                <span className="text-[10px] text-[#006947] font-semibold mt-2">
+                  {exportSuccess === 'parquet' ? 'Downloaded!' : 'Download .parquet'}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => downloadExport('datasheet')}
+                disabled={exportKind !== null}
+                className="p-4 rounded-lg border border-[#e2e8f0] hover:border-[#006194] hover:bg-[#eff4ff] transition-all flex flex-col gap-1 text-left cursor-pointer group disabled:opacity-60"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-['Inter'] text-xs font-bold text-[#0b1c30] group-hover:text-[#006194]">
+                    Datasheet
+                  </span>
+                  <FileCode className="w-4 h-4 text-[#006194]" />
+                </div>
+                <span className="text-[11px] text-[#565e74]">
+                  Composition, license, and limits.
+                </span>
+                <span className="text-[10px] text-[#006947] font-semibold mt-2">
+                  {exportSuccess === 'datasheet' ? 'Downloaded!' : 'Download .md'}
                 </span>
               </button>
             </div>
@@ -387,8 +386,8 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
           </button>
         </div>
         <p className="font-['Inter'] text-xs text-[#565e74] leading-relaxed">
-          Live read from GET /api/v1/dataset. Only profiles that opted in are listed. Names, dates
-          of birth, and internal ids are not in this response.
+          Live read from GET /api/v1/dataset. The CSV, Parquet, and datasheet above are the same
+          opted-in rows. Names, dates of birth, and internal ids are not in this response.
         </p>
         {datasetLoading && (
           <p className="text-xs text-[#565e74]">Loading the public dataset…</p>
