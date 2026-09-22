@@ -17,7 +17,7 @@ import {
   ArrowRight,
   FlaskConical,
 } from 'lucide-react';
-import logo from '../../assets/logo.png';
+import logo from '../../assets/images/logo.jpg';
 
 interface OverviewTabProps {
   setActiveTab: (tab: TabType) => void;
@@ -308,7 +308,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             <div className="bg-[#007bb9] text-[#ffffff] p-5 rounded-xl flex items-center gap-4 shadow-sm">
               <div className="w-12 h-12 rounded-full bg-white/20 p-1 flex items-center justify-center shrink-0 ring-2 ring-white/30">
                 <img
-                  alt="NotMice Emblem"
+                  alt="Logo"
                   className="w-full h-full rounded-full object-cover"
                   src={logo}
                   referrerPolicy="no-referrer"
