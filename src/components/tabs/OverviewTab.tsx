@@ -24,8 +24,9 @@ interface OverviewTabProps {
   onOpenProofModal: () => void;
   biomarkers: Record<string, number>;
   onUpdateBiomarkers: (updated: Record<string, number>) => void;
-  phenoAge: number;
+  phenoAge: number | null;
   chronologicalAge: number;
+  disclaimer: string;
   isAuthenticated: boolean;
 }
 
@@ -37,11 +38,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   onUpdateBiomarkers,
   phenoAge,
   chronologicalAge,
+  disclaimer,
   isAuthenticated,
 }) => {
   const alb = biomarkers['albumin'] ?? 46.0;
   const crp = biomarkers['crp'] ?? 0.8;
-  const ageDelta = phenoAge - chronologicalAge;
+  const ageDelta = phenoAge === null ? null : phenoAge - chronologicalAge;
 
   const handleAlbuminChange = (val: number) => {
     onUpdateBiomarkers({ ...biomarkers, albumin: val });
@@ -173,23 +175,32 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       className="font-['Inter'] text-3xl sm:text-4xl font-bold text-[#006194]"
                       id="bio-age-val"
                     >
-                      {phenoAge.toFixed(1)}
+                      {phenoAge === null ? '…' : phenoAge.toFixed(1)}
                     </span>
                     <span
                       className={`font-['JetBrains_Mono'] text-xs font-bold px-1.5 py-0.5 rounded ${
-                        ageDelta <= 0
+                        ageDelta !== null && ageDelta <= 0
                           ? 'bg-[#4edea3]/25 text-[#006947]'
                           : 'bg-[#ffdad6] text-[#ba1a1a]'
                       }`}
                     >
-                      {ageDelta > 0 ? `+${ageDelta.toFixed(1)}` : `${ageDelta.toFixed(1)}`} Yrs
+                      {ageDelta === null
+                        ? '…'
+                        : `${ageDelta > 0 ? '+' : ''}${ageDelta.toFixed(1)} Yrs`}
                     </span>
                   </div>
                   <span className="font-['Inter'] text-xs text-[#006947] font-semibold">
-                    {ageDelta <= 0 ? 'Decelerated Aging Vector' : 'Accelerated Aging Vector'}
+                    {ageDelta === null
+                      ? 'Research index'
+                      : ageDelta <= 0
+                        ? 'Decelerated Aging Vector'
+                        : 'Accelerated Aging Vector'}
                   </span>
                 </div>
               </div>
+              <p className="font-['Inter'] text-xs text-[#3f4850] border-l-2 border-[#006194] pl-3">
+                {disclaimer}
+              </p>
 
               {/* Dynamic Biomarker Interactive Sliders */}
               <div className="flex flex-col gap-3 pt-1">

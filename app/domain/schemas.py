@@ -127,3 +127,42 @@ class ConfirmResponse(BaseModel):
     parser_version: str
     confirmed_at: datetime
     marker_count: int
+
+
+class PhenoAgeMarkers(BaseModel):
+    """Nine PhenoAge analytes in LOINC-dictionary canonical units."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    albumin: float = Field(gt=0, description="Serum albumin, g/L (LOINC 1751-7).")
+    creatinine: float = Field(gt=0, description="Serum creatinine, mg/dL (LOINC 2160-0).")
+    glucose: float = Field(gt=0, description="Fasting glucose, mg/dL (LOINC 2345-7).")
+    crp: float = Field(gt=0, description="hs-CRP, mg/L (LOINC 30522-7).")
+    lymphocyte: float = Field(gt=0, le=100, description="Lymphocyte percent (LOINC 26474-7).")
+    mcv: float = Field(gt=0, description="Mean corpuscular volume, fL (LOINC 787-2).")
+    rdw: float = Field(gt=0, description="Red cell distribution width, % (LOINC 788-0).")
+    alp: float = Field(gt=0, description="Alkaline phosphatase, U/L (LOINC 6768-6).")
+    wbc: float = Field(gt=0, description="White blood cell count, 10^3/µL (LOINC 6690-2).")
+
+
+class PhenoAgeRequest(BaseModel):
+    """Chronological age plus the nine Levine biomarkers. No identity fields."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    chronological_age: float = Field(ge=0, le=120, description="Age in years.")
+    markers: PhenoAgeMarkers
+
+
+class PhenoAgeResponse(BaseModel):
+    """Research index. ``disclaimer`` states this is not a medical service."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    chronological_age: float
+    pheno_age: float
+    age_delta: float
+    mortality_score_10yr: float = Field(
+        description="10-year mortality probability from the Gompertz CDF, in [0, 1].",
+    )
+    disclaimer: str

@@ -265,14 +265,15 @@ export const LifestyleLongevityAdvisor: React.FC<LifestyleLongevityAdvisorProps>
                 calculation.ageDelta <= 0 ? 'text-[#006947]' : 'text-[#ba1a1a]'
               }`}
             >
-              {calculation.ageDelta > 0
-                ? `+${calculation.ageDelta.toFixed(1)}`
-                : calculation.ageDelta.toFixed(1)}
+              {calculation.isValid
+                ? `${calculation.ageDelta > 0 ? '+' : ''}${calculation.ageDelta.toFixed(1)}`
+                : '…'}
             </span>
             <span className="text-xs text-[#565e74]">yrs biological age</span>
           </div>
           <span className="font-['JetBrains_Mono'] text-[10px] text-[#565e74] mt-1">
-            PhenoAge {calculation.phenoAge.toFixed(1)} vs Chrono {chronologicalAge.toFixed(1)}
+            PhenoAge {calculation.isValid ? calculation.phenoAge.toFixed(1) : '…'} vs Chrono{' '}
+            {chronologicalAge.toFixed(1)}
           </span>
         </div>
 

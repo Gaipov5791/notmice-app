@@ -76,6 +76,7 @@ export interface PhenoAgeCalculation {
   }[];
   isValid: boolean;
   activeCount: number;
+  disclaimer: string;
 }
 
 export interface HistoricalTestRecord {

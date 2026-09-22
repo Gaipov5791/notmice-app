@@ -19,7 +19,7 @@ export const TerminalModal: React.FC<TerminalModalProps> = ({
     `[MEM_SANDBOX] Allocated isolated SharedArrayBuffer (4096 KB) at 0x00A8F00.`,
     `[CRYPTO] Ephemeral session key generated for node ${accountAddress}.`,
     `[LOINC_DICTIONARY] Loaded 9 PhenoAge target codes from LOINC 2024.2 specs.`,
-    `[GOMPERTZ_ENGINE] NHANES IV regression calibrated: gamma=0.0076927, intercept=-19.9067.`,
+    `[PHENOAGE] Research index (Levine 2018). Not a medical service.`,
     `[EXEC_STATUS] Active PhenoAge calculation verified: ${phenoAge.toFixed(1)} yrs.`,
     `[AUDIT] Zero network transmissions detected. In-memory data integrity: 100%.`,
   ]);

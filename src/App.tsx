@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { TabType, LabPanelData, HistoricalTestRecord, AccountState } from './types';
+import { TabType, LabPanelData, HistoricalTestRecord, AccountState, PhenoAgeCalculation } from './types';
 import { INITIAL_BIOMARKERS, INITIAL_HISTORY, PRESET_LAB_PANELS } from './data/phenoAgeData';
-import { calculatePhenoAge, generateCryptoHash } from './utils/phenoAgeMath';
+import { PHENOAGE_DISCLAIMER, fetchPhenoAge, PhenoAgeScore } from './api/phenoage';
+import { displayBiomarkerScores, displayPercentile, generateCryptoHash } from './utils/phenoAgeMath';
 import {
   clearStoredToken,
   createAccount,
@@ -34,6 +35,8 @@ export default function App() {
   const [revealedMnemonic, setRevealedMnemonic] = useState<string[] | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [phenoAgeScore, setPhenoAgeScore] = useState<PhenoAgeScore | null>(null);
+  const [phenoAgeError, setPhenoAgeError] = useState<string | null>(null);
 
   // Modals state
   const [isProofModalOpen, setIsProofModalOpen] = useState(false);
@@ -83,10 +86,54 @@ export default function App() {
 
   const publicIdLabel = account?.publicId ?? 'Guest';
 
-  // Dynamic real-time calculation using Levine 2018 algorithm
-  const phenoAgeCalculation = useMemo(() => {
-    return calculatePhenoAge(chronologicalAge, biomarkers);
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      void fetchPhenoAge(chronologicalAge, biomarkers, controller.signal)
+        .then((score) => {
+          setPhenoAgeScore(score);
+          setPhenoAgeError(null);
+        })
+        .catch((err: unknown) => {
+          if (err instanceof DOMException && err.name === 'AbortError') {
+            return;
+          }
+          setPhenoAgeError(err instanceof Error ? err.message : 'PhenoAge request failed');
+        });
+    }, 200);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
   }, [chronologicalAge, biomarkers]);
+
+  const phenoAgeCalculation = useMemo<PhenoAgeCalculation>(() => {
+    const biomarkerScores = displayBiomarkerScores(biomarkers);
+    if (!phenoAgeScore) {
+      return {
+        chronologicalAge,
+        phenoAge: 0,
+        ageDelta: 0,
+        mortalityScore10yr: 0,
+        percentileRank: 50,
+        biomarkerScores,
+        isValid: false,
+        activeCount: Object.keys(biomarkers).length,
+        disclaimer: PHENOAGE_DISCLAIMER,
+      };
+    }
+    return {
+      chronologicalAge: phenoAgeScore.chronologicalAge,
+      phenoAge: phenoAgeScore.phenoAge,
+      ageDelta: phenoAgeScore.ageDelta,
+      mortalityScore10yr: Math.round(phenoAgeScore.mortalityScore10yr * 1000) / 10,
+      percentileRank: displayPercentile(phenoAgeScore.ageDelta),
+      biomarkerScores,
+      isValid: true,
+      activeCount: Object.keys(biomarkers).length,
+      disclaimer: phenoAgeScore.disclaimer,
+    };
+  }, [biomarkers, chronologicalAge, phenoAgeScore]);
 
   const activeHash = useMemo(() => {
     return generateCryptoHash({ chronologicalAge, biomarkers });
@@ -99,6 +146,9 @@ export default function App() {
   };
 
   const handleSaveToHistory = () => {
+    if (!phenoAgeCalculation.isValid) {
+      return;
+    }
     const today = new Date().toISOString().split('T')[0];
     const newRecord: HistoricalTestRecord = {
       id: `hist-${Date.now()}`,
@@ -232,8 +282,9 @@ export default function App() {
             onOpenProofModal={() => setIsProofModalOpen(true)}
             biomarkers={biomarkers}
             onUpdateBiomarkers={setBiomarkers}
-            phenoAge={phenoAgeCalculation.phenoAge}
+            phenoAge={phenoAgeCalculation.isValid ? phenoAgeCalculation.phenoAge : null}
             chronologicalAge={chronologicalAge}
+            disclaimer={phenoAgeCalculation.disclaimer}
             isAuthenticated={account !== null}
           />
         )}
@@ -267,6 +318,7 @@ export default function App() {
         {activeTab === 'phenoage-engine' && (
           <PhenoAgeEngineTab
             calculation={phenoAgeCalculation}
+            scoreError={phenoAgeError}
             biomarkers={biomarkers}
             onUpdateBiomarkers={setBiomarkers}
             chronologicalAge={chronologicalAge}

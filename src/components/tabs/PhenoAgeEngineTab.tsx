@@ -19,6 +19,7 @@ import {
 
 interface PhenoAgeEngineTabProps {
   calculation: PhenoAgeCalculation;
+  scoreError: string | null;
   biomarkers: Record<string, number>;
   onUpdateBiomarkers: (biomarkers: Record<string, number>) => void;
   chronologicalAge: number;
@@ -30,6 +31,7 @@ interface PhenoAgeEngineTabProps {
 
 export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
   calculation,
+  scoreError,
   biomarkers,
   onUpdateBiomarkers,
   chronologicalAge,
@@ -67,7 +69,7 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
     });
   };
 
-  const isDecelerated = calculation.ageDelta <= 0;
+  const isDecelerated = calculation.isValid && calculation.ageDelta <= 0;
 
   return (
     <div className="w-full max-w-[1440px] mx-auto px-4 lg:px-8 py-8 flex flex-col gap-8">
@@ -90,6 +92,12 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
             parameters below to simulate how intervention strategies shift your biological aging
             trajectory.
           </p>
+          <p className="font-['Inter'] text-xs text-[#3f4850] mt-3 max-w-2xl border-l-2 border-[#006194] pl-3">
+            {calculation.disclaimer}
+          </p>
+          {scoreError && (
+            <p className="font-['Inter'] text-xs text-[#ba1a1a] mt-2">{scoreError}</p>
+          )}
         </div>
 
         {/* Global actions */}
@@ -159,7 +167,7 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
             </div>
             <div className="flex items-baseline gap-2 mt-2">
               <span className="font-['Inter'] text-4xl font-bold text-[#006194]">
-                {calculation.phenoAge.toFixed(1)}
+                {calculation.isValid ? calculation.phenoAge.toFixed(1) : '…'}
               </span>
               <span className="text-xs text-[#565e74]">years</span>
             </div>
@@ -176,10 +184,9 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
               ) : (
                 <TrendingUp className="w-3.5 h-3.5" />
               )}
-              {calculation.ageDelta > 0
-                ? `+${calculation.ageDelta.toFixed(1)}`
-                : `${calculation.ageDelta.toFixed(1)}`}{' '}
-              Yrs
+              {calculation.isValid
+                ? `${calculation.ageDelta > 0 ? '+' : ''}${calculation.ageDelta.toFixed(1)} Yrs`
+                : '…'}
             </span>
           </div>
         </div>
@@ -193,7 +200,7 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
             </div>
             <div className="flex items-baseline gap-2 mt-2">
               <span className="font-['Inter'] text-3xl font-bold text-[#006947]">
-                {calculation.mortalityScore10yr.toFixed(1)}%
+                {calculation.isValid ? `${calculation.mortalityScore10yr.toFixed(1)}%` : '…'}
               </span>
               <span className="text-xs text-[#565e74]">cumulative</span>
             </div>
@@ -213,7 +220,9 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
             </div>
             <div className="flex items-baseline gap-2 mt-2">
               <span className="font-['Inter'] text-3xl font-bold text-[#006194]">
-                Top {Math.max(1, 100 - calculation.percentileRank)}%
+                {calculation.isValid
+                  ? `Top ${Math.max(1, 100 - calculation.percentileRank)}%`
+                  : '…'}
               </span>
             </div>
           </div>
