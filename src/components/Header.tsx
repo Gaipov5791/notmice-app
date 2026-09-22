@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { TabType } from '../types';
-import { Shield, Terminal, Menu, X, Cpu, KeyRound } from 'lucide-react';
+import { ChevronDown, Shield, Terminal, Menu, X, Cpu, KeyRound } from 'lucide-react';
 import logo from '../assets/images/logo.jpg';
 
 interface HeaderProps {
@@ -21,6 +21,8 @@ export const Header: React.FC<HeaderProps> = ({
   isAuthenticated,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const desktopNavRef = useRef<HTMLElement>(null);
 
   const navItems: { id: TabType; label: string }[] = [
     { id: 'overview-landing', label: 'Overview / Landing' },
@@ -31,14 +33,57 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'data-sovereignty-public-sharing', label: 'Data Sovereignty & Public Sharing' },
   ];
 
+  const labItems = navItems.filter((item) => item.id === 'upload-lab' || item.id === 'review-extraction');
+  const phenoAgeItems = navItems.filter(
+    (item) => item.id === 'phenoage-engine' || item.id === 'biomarker-history',
+  );
+
+  const desktopGroups: { id: string; label: string; items: { id: TabType; label: string }[] }[] = [
+    { id: 'lab', label: 'Lab', items: labItems },
+    { id: 'phenoage', label: 'PhenoAge', items: phenoAgeItems },
+  ];
+
+  useEffect(() => {
+    if (!openMenu) {
+      return;
+    }
+    const onPointerDown = (event: MouseEvent) => {
+      if (!desktopNavRef.current?.contains(event.target as Node)) {
+        setOpenMenu(null);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpenMenu(null);
+      }
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [openMenu]);
+
+  const linkClass = (isActive: boolean) =>
+    `font-['Inter'] text-[13px] font-medium px-3 py-1.5 rounded transition-all cursor-pointer whitespace-nowrap ${
+      isActive
+        ? 'bg-[#007bb9] text-[#ffffff] shadow-sm font-semibold'
+        : 'text-[#3f4850] hover:bg-[#e5eeff] hover:text-[#0b1c30]'
+    }`;
+
+  const selectTab = (tab: TabType) => {
+    setActiveTab(tab);
+    setOpenMenu(null);
+  };
+
   return (
     <header className="fixed top-0 left-0 w-full z-50 bg-[#ffffff]/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] border-b border-[#e2e8f0]">
-      <div className="w-full max-w-[1440px] mx-auto px-4 lg:px-6 h-20 flex items-center justify-between gap-4">
-        {/* Logo and Brand */}
-        <div className="flex items-center gap-6 shrink-0">
+      <div className="relative w-full max-w-[1440px] mx-auto px-4 lg:px-6 h-20 flex items-center justify-between gap-3 min-w-0">
+        <div className="flex items-center min-w-0">
           <button
             onClick={() => setActiveTab('overview-landing')}
-            className="flex items-center gap-3 text-left focus:outline-none group cursor-pointer"
+            className="flex items-center gap-3 text-left focus:outline-none group cursor-pointer shrink-0"
             id="brand-logo-btn"
           >
             <div className="relative">
@@ -64,28 +109,78 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
             </div>
           </button>
+        </div>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden xl:flex items-center gap-1" id="desktop-nav">
-            {navItems.map((item) => {
-              const isActive = activeTab === item.id;
+          <nav
+            ref={desktopNavRef}
+            className="hidden xl:flex items-center gap-1 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+            id="desktop-nav"
+          >
+            <button
+              type="button"
+              onClick={() => selectTab('overview-landing')}
+              data-path="overview-landing"
+              className={linkClass(activeTab === 'overview-landing')}
+            >
+              Overview
+            </button>
+
+            {desktopGroups.map((group) => {
+              const isOpen = openMenu === group.id;
+              const isActive = group.items.some((item) => item.id === activeTab);
               return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  data-path={item.id}
-                  className={`font-['Inter'] text-[13px] font-medium px-3 py-1.5 rounded transition-all cursor-pointer ${
-                    isActive
-                      ? 'bg-[#007bb9] text-[#ffffff] shadow-sm font-semibold'
-                      : 'text-[#3f4850] hover:bg-[#e5eeff] hover:text-[#0b1c30]'
-                  }`}
-                >
-                  {item.label}
-                </button>
+                <div key={group.id} className="relative">
+                  <button
+                    type="button"
+                    aria-expanded={isOpen}
+                    aria-haspopup="menu"
+                    onClick={() => setOpenMenu(isOpen ? null : group.id)}
+                    className={`${linkClass(isActive)} inline-flex items-center gap-1`}
+                  >
+                    {group.label}
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                  {isOpen && (
+                    <div
+                      role="menu"
+                      className="absolute left-0 top-full mt-1 min-w-[220px] rounded-lg border border-[#e2e8f0] bg-[#ffffff] py-1 shadow-lg"
+                    >
+                      {group.items.map((item) => {
+                        const itemActive = activeTab === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            role="menuitem"
+                            data-path={item.id}
+                            onClick={() => selectTab(item.id)}
+                            className={`block w-full text-left px-3 py-2 text-[13px] font-medium cursor-pointer ${
+                              itemActive
+                                ? 'bg-[#007bb9] text-[#ffffff]'
+                                : 'text-[#3f4850] hover:bg-[#eff4ff] hover:text-[#0b1c30]'
+                            }`}
+                          >
+                            {item.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               );
             })}
+
+            <button
+              type="button"
+              onClick={() => selectTab('data-sovereignty-public-sharing')}
+              data-path="data-sovereignty-public-sharing"
+              className={linkClass(activeTab === 'data-sovereignty-public-sharing')}
+            >
+              Data
+            </button>
           </nav>
-        </div>
 
         {/* Right Status Controls */}
         <div className="flex items-center gap-2.5 shrink-0">
@@ -163,13 +258,21 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
               );
             })}
-            <div className="pt-2 mt-2 border-t border-[#e2e8f0] flex items-center justify-between text-xs text-[#565e74]">
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                onOpenSeedPhrase();
+              }}
+              title={isAuthenticated ? 'Account recovery phrase' : 'Sign in or create an account'}
+              className="mt-2 border-t border-[#e2e8f0] flex w-full items-center justify-between px-3 py-2.5 text-left text-xs text-[#565e74] hover:bg-[#eff4ff] rounded cursor-pointer"
+            >
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-[#00855b]"></span>
                 {isAuthenticated ? 'Signed in' : 'Guest'}
               </span>
               <span className="font-mono">{accountAddress}</span>
-            </div>
+            </button>
           </div>
         </div>
       )}
