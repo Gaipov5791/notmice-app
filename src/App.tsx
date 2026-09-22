@@ -25,6 +25,25 @@ import { ProofModal } from './components/ProofModal';
 import { SeedPhraseModal } from './components/SeedPhraseModal';
 import { TerminalModal } from './components/TerminalModal';
 import { Footer } from './components/Footer';
+import { SplashScreen } from './components/SplashScreen';
+
+const SPLASH_SEEN_KEY = 'notmice.splashSeen';
+
+function splashAlreadySeen(): boolean {
+  try {
+    return localStorage.getItem(SPLASH_SEEN_KEY) === '1';
+  } catch {
+    return true;
+  }
+}
+
+function markSplashSeen(): void {
+  try {
+    localStorage.setItem(SPLASH_SEEN_KEY, '1');
+  } catch {
+    // Storage can be blocked; the splash still closes for this visit.
+  }
+}
 
 function tutorialPanel(): LabPanelData {
   return {
@@ -58,6 +77,7 @@ export default function App() {
   const [isProofModalOpen, setIsProofModalOpen] = useState(false);
   const [isSeedPhraseModalOpen, setIsSeedPhraseModalOpen] = useState(false);
   const [isTerminalModalOpen, setIsTerminalModalOpen] = useState(false);
+  const [showSplash, setShowSplash] = useState(() => !splashAlreadySeen());
 
   const [currentPanel, setCurrentPanel] = useState<LabPanelData>(tutorialPanel);
 
@@ -255,8 +275,14 @@ export default function App() {
     }
   };
 
+  const dismissSplash = () => {
+    markSplashSeen();
+    setShowSplash(false);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-[#f8f9ff] text-[#0b1c30] antialiased">
+      {showSplash && <SplashScreen onDone={dismissSplash} />}
       {/* Top Fixed Header with Brand, Tabs, and Ephemeral Address */}
       <Header
         activeTab={activeTab}
