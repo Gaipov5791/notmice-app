@@ -36,6 +36,9 @@ services:
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
       CLAUDE_API_KEY: ${CLAUDE_API_KEY:-}
       CLAUDE_MODEL: ${CLAUDE_MODEL:-claude-sonnet-5}
+      DATASET_RATE_LIMIT: ${DATASET_RATE_LIMIT:-60}
+      DATASET_RATE_LIMIT_WINDOW_SECONDS: ${DATASET_RATE_LIMIT_WINDOW_SECONDS:-60}
+      TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-true}
     depends_on:
       postgres:
         condition: service_healthy

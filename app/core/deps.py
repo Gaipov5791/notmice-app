@@ -12,11 +12,14 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.core.config import get_settings
+from app.core.rate_limit import SlidingWindowRateLimiter
 from app.core.security import Argon2SeedHasher, JwtTokenIssuer
+from app.repositories.dataset import DatasetRepository
 from app.repositories.health import HealthRepository
 from app.repositories.lab_results import LabResultRepository
 from app.repositories.users import UserRepository
 from app.services.accounts import AccountService
+from app.services.dataset import DatasetService
 from app.services.extract_sessions import InMemoryExtractSessionStore
 from app.services.health import HealthService
 from app.services.uploads import UploadService
@@ -26,6 +29,7 @@ _engine: AsyncEngine | None = None
 _session_factory: async_sessionmaker[AsyncSession] | None = None
 _extract_sessions: InMemoryExtractSessionStore | None = None
 _vision_provider: ExtractionProvider | None = None
+_public_rate_limiter: SlidingWindowRateLimiter | None = None
 
 
 def get_engine() -> AsyncEngine:
@@ -105,6 +109,25 @@ def get_vision_provider() -> ExtractionProvider:
     return _vision_provider
 
 
+def get_public_rate_limiter() -> SlidingWindowRateLimiter:
+    """Return the process-wide limiter for the public dataset routes."""
+    global _public_rate_limiter
+    if _public_rate_limiter is None:
+        settings = get_settings()
+        _public_rate_limiter = SlidingWindowRateLimiter(
+            limit=settings.dataset_rate_limit,
+            window_seconds=settings.dataset_rate_limit_window_seconds,
+        )
+    return _public_rate_limiter
+
+
+async def get_dataset_service(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> DatasetService:
+    """Build the public dataset service for a request."""
+    return DatasetService(DatasetRepository(session))
+
+
 async def get_upload_service(
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> UploadService:
@@ -119,8 +142,8 @@ async def get_upload_service(
 
 
 async def dispose_engine() -> None:
-    """Dispose the engine and RAM extract sessions on shutdown."""
-    global _engine, _session_factory, _extract_sessions, _vision_provider
+    """Dispose the engine, RAM extract sessions, and the public rate limiter."""
+    global _engine, _session_factory, _extract_sessions, _vision_provider, _public_rate_limiter
     if _engine is not None:
         await _engine.dispose()
     _engine = None
@@ -129,3 +152,4 @@ async def dispose_engine() -> None:
         _extract_sessions.clear()
     _extract_sessions = None
     _vision_provider = None
+    _public_rate_limiter = None

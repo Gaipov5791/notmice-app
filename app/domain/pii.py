@@ -23,6 +23,22 @@ FORBIDDEN_PII_KEYS: Final[frozenset[str]] = frozenset(
     }
 )
 
+# Internal identifiers and secrets that must never appear on the public read API.
+SENSITIVE_OUTPUT_KEYS: Final[frozenset[str]] = FORBIDDEN_PII_KEYS | frozenset(
+    {
+        "user_id",
+        "lab_result_id",
+        "biomarker_id",
+        "provenance_id",
+        "entered_by_user_id",
+        "seed_phrase_hash",
+        "document_sha256",
+        "mnemonic",
+        "access_token",
+        "internal_id",
+    }
+)
+
 
 class PIIValidationError(ValueError):
     """Raised when a payload contains a forbidden personally identifying key."""
@@ -38,14 +54,38 @@ def reject_pii(payload: object, *, _path: str = "$") -> None:
     Raises:
         PIIValidationError: If a forbidden key is present at any depth.
     """
+    _reject_keys(payload, FORBIDDEN_PII_KEYS, label="Forbidden PII key", _path=_path)
+
+
+def reject_sensitive_output(payload: object, *, _path: str = "$") -> None:
+    """Reject PII keys and internal identifiers on a public response.
+
+    Args:
+        payload: Mapping, sequence, or scalar about to be returned.
+        _path: JSON-path used in error messages.
+
+    Raises:
+        PIIValidationError: If a forbidden key is present at any depth.
+    """
+    _reject_keys(payload, SENSITIVE_OUTPUT_KEYS, label="Forbidden sensitive key", _path=_path)
+
+
+def _reject_keys(
+    payload: object,
+    forbidden: frozenset[str],
+    *,
+    label: str,
+    _path: str,
+) -> None:
+    """Walk ``payload`` and raise when a key is in ``forbidden``."""
     if isinstance(payload, Mapping):
         for key, value in payload.items():
             key_text = str(key)
             child_path = f"{_path}.{key_text}"
-            if key_text.lower() in FORBIDDEN_PII_KEYS:
-                raise PIIValidationError(f"Forbidden PII key at {child_path}")
-            reject_pii(value, _path=child_path)
+            if key_text.lower() in forbidden:
+                raise PIIValidationError(f"{label} at {child_path}")
+            _reject_keys(value, forbidden, label=label, _path=child_path)
         return
     if isinstance(payload, Sequence) and not isinstance(payload, (str, bytes, bytearray)):
         for index, item in enumerate(payload):
-            reject_pii(item, _path=f"{_path}[{index}]")
+            _reject_keys(item, forbidden, label=label, _path=f"{_path}[{index}]")

@@ -1,5 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { TabType, HistoricalTestRecord } from '../../types';
+import {
+  DatasetRequestError,
+  fetchPublicDataset,
+  fetchPublicTimeseries,
+  PublicDatasetPage,
+  PublicTimeseries,
+} from '../../api/dataset';
 import {
   Download,
   Share2,
@@ -32,6 +39,67 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
   setActiveTab,
 }) => {
   const [downloadSuccess, setDownloadSuccess] = useState<string | null>(null);
+  const [datasetReload, setDatasetReload] = useState(0);
+  const [datasetPage, setDatasetPage] = useState<PublicDatasetPage | null>(null);
+  const [datasetError, setDatasetError] = useState<string | null>(null);
+  const [datasetLoading, setDatasetLoading] = useState(true);
+  const [series, setSeries] = useState<PublicTimeseries | null>(null);
+  const [seriesNote, setSeriesNote] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setDatasetLoading(true);
+    setDatasetError(null);
+    void fetchPublicDataset({ limit: 20, signal: controller.signal })
+      .then((page) => {
+        setDatasetPage(page);
+        setDatasetLoading(false);
+      })
+      .catch((err: unknown) => {
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          return;
+        }
+        setDatasetPage(null);
+        setDatasetError(
+          err instanceof DatasetRequestError
+            ? `Public dataset request failed (${err.status}).`
+            : 'Public dataset API did not respond.',
+        );
+        setDatasetLoading(false);
+      });
+    return () => controller.abort();
+  }, [datasetReload, isPublic]);
+
+  useEffect(() => {
+    if (!isPublic || accountAddress === 'Guest') {
+      setSeries(null);
+      setSeriesNote(null);
+      return;
+    }
+    const controller = new AbortController();
+    setSeriesNote('Loading this profile from the public API…');
+    void fetchPublicTimeseries(accountAddress, controller.signal)
+      .then((payload) => {
+        setSeries(payload);
+        setSeriesNote(
+          payload.points.length === 0
+            ? 'No confirmed biomarker rows are public for this profile yet.'
+            : null,
+        );
+      })
+      .catch((err: unknown) => {
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          return;
+        }
+        setSeries(null);
+        setSeriesNote(
+          err instanceof DatasetRequestError && err.status === 404
+            ? 'This profile is not in the public dataset.'
+            : 'Could not load this profile from the public API.',
+        );
+      });
+    return () => controller.abort();
+  }, [accountAddress, isPublic, datasetReload]);
 
   const downloadJsonVault = () => {
     const dataStr =
@@ -275,9 +343,16 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
                   Public sharing is on
                 </span>
                 <p className="text-[11px] text-[#565e74] leading-relaxed">
-                  Confirmed biomarker rows for this account will be eligible for the public dataset
-                  API once that endpoint ships. Original lab files are never stored.
+                  Confirmed biomarker rows for this account are included in the read-only public
+                  dataset. Original lab files are never stored.
                 </p>
+                {seriesNote && <p className="text-[11px] text-[#0b1c30]">{seriesNote}</p>}
+                {series && series.points.length > 0 && (
+                  <p className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]">
+                    {series.points.length} collection {series.points.length === 1 ? 'date' : 'dates'}{' '}
+                    on {series.publicId}
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -296,6 +371,70 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
             </p>
           </div>
         </div>
+      </div>
+
+      <div className="bg-[#ffffff] p-6 rounded-xl border border-[#cbd5e1] shadow-xs flex flex-col gap-4">
+        <div className="flex items-center justify-between gap-3">
+          <span className="font-['Inter'] text-base font-bold text-[#0b1c30]">
+            Public dataset
+          </span>
+          <button
+            type="button"
+            onClick={() => setDatasetReload((value) => value + 1)}
+            className="font-['Inter'] text-xs font-semibold text-[#006194] hover:underline cursor-pointer"
+          >
+            Reload
+          </button>
+        </div>
+        <p className="font-['Inter'] text-xs text-[#565e74] leading-relaxed">
+          Live read from GET /api/v1/dataset. Only profiles that opted in are listed. Names, dates
+          of birth, and internal ids are not in this response.
+        </p>
+        {datasetLoading && (
+          <p className="text-xs text-[#565e74]">Loading the public dataset…</p>
+        )}
+        {datasetError && (
+          <p className="text-xs text-[#ba1a1a]" role="alert">
+            {datasetError}
+          </p>
+        )}
+        {datasetPage && !datasetLoading && datasetPage.total === 0 && (
+          <p className="text-xs text-[#565e74]">The public dataset has no confirmed rows yet.</p>
+        )}
+        {datasetPage && !datasetLoading && datasetPage.rows.length > 0 && (
+          <div className="overflow-x-auto">
+            <p className="font-['JetBrains_Mono'] text-[11px] text-[#565e74] mb-2">
+              Showing {datasetPage.rows.length} of {datasetPage.total}
+            </p>
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="font-['Inter'] text-[#565e74] border-b border-[#e2e8f0]">
+                  <th className="py-2 pr-3 font-semibold">Public id</th>
+                  <th className="py-2 pr-3 font-semibold">Collected</th>
+                  <th className="py-2 pr-3 font-semibold">LOINC</th>
+                  <th className="py-2 pr-3 font-semibold">Marker</th>
+                  <th className="py-2 pr-3 font-semibold">Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {datasetPage.rows.map((row, index) => (
+                  <tr
+                    key={`${row.publicId}-${row.loincCode ?? row.rawName}-${row.collectedAt ?? 'na'}-${index}`}
+                    className="border-b border-[#f1f5f9] font-['JetBrains_Mono'] text-[#0b1c30]"
+                  >
+                    <td className="py-2 pr-3">{row.publicId}</td>
+                    <td className="py-2 pr-3">{row.collectedAt ?? '—'}</td>
+                    <td className="py-2 pr-3">{row.loincCode ?? '—'}</td>
+                    <td className="py-2 pr-3">{row.canonicalName ?? row.rawName}</td>
+                    <td className="py-2 pr-3">
+                      {row.value} {row.unit}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

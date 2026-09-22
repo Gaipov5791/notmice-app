@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.accounts import router as accounts_router
+from app.api.dataset import router as dataset_router
 from app.api.health import router as health_router
 from app.api.phenoage import router as phenoage_router
 from app.api.uploads import router as uploads_router
@@ -35,8 +36,13 @@ def create_app() -> FastAPI:
     application = FastAPI(
         title="NotMice API",
         version="0.1.0",
+        openapi_version="3.1.0",
         lifespan=lifespan,
         license_info={"name": "AGPL-3.0-or-later"},
+        description=(
+            "Read-only public dataset routes return anonymized opt-in biomarker rows. "
+            "They do not accept writes."
+        ),
     )
     application.add_middleware(
         CORSMiddleware,
@@ -49,6 +55,7 @@ def create_app() -> FastAPI:
     application.include_router(accounts_router)
     application.include_router(uploads_router)
     application.include_router(phenoage_router)
+    application.include_router(dataset_router)
     return application
 
 

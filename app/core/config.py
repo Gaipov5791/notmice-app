@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     claude_model: str = "claude-sonnet-5"
     max_upload_bytes: int = 15_728_640
     extract_session_ttl_seconds: int = 1_800
+    dataset_rate_limit: int = 60
+    dataset_rate_limit_window_seconds: int = 60
+    trust_proxy_headers: bool = True
 
     @property
     def cors_origin_list(self) -> list[str]:

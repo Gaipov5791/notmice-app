@@ -166,3 +166,62 @@ class PhenoAgeResponse(BaseModel):
         description="10-year mortality probability from the Gompertz CDF, in [0, 1].",
     )
     disclaimer: str
+
+
+class PublicBiomarkerView(BaseModel):
+    """One anonymized analyte row. No internal ids and no personal identifiers."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    public_id: str
+    collected_at: date | None
+    chronological_age: float | None
+    loinc_code: str | None
+    canonical_name: str | None
+    raw_name: str
+    value: float
+    unit: str
+    mapping_status: str
+
+
+class DatasetResponse(BaseModel):
+    """Page of confirmed biomarker rows from profiles that opted in."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    rows: list[PublicBiomarkerView]
+    total: int
+    limit: int
+    offset: int
+
+
+class TimeseriesMarkerView(BaseModel):
+    """One analyte inside a public profile's time series."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    loinc_code: str | None
+    canonical_name: str | None
+    raw_name: str
+    value: float
+    unit: str
+    mapping_status: str
+
+
+class TimeseriesPointView(BaseModel):
+    """Markers that share one collection date on a public profile."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    collected_at: date | None
+    chronological_age: float | None
+    markers: list[TimeseriesMarkerView]
+
+
+class TimeseriesResponse(BaseModel):
+    """Confirmed biomarker history for one opted-in profile."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    public_id: str
+    points: list[TimeseriesPointView]
