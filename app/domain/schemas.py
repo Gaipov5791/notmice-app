@@ -76,6 +76,9 @@ class ExtractedMarkerView(BaseModel):
     unit: str
     confidence: float
     mapping_status: str
+    within_range: bool | None = Field(
+        description="False when a mapped value sits outside the dictionary typo window.",
+    )
 
 
 class ExtractResponse(BaseModel):

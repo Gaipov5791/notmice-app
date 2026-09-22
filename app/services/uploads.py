@@ -9,6 +9,8 @@ from uuid import UUID
 
 import structlog
 
+from app.domain.enums import MappingStatus
+from app.domain.loinc import LoincDictionary
 from app.domain.uploads import (
     ConfirmedLabResult,
     EmptyPayloadError,
@@ -24,6 +26,7 @@ from app.domain.uploads import (
     parser_version_for,
 )
 from app.services.extract_sessions import InMemoryExtractSessionStore
+from app.services.loinc_dictionary import load_loinc_dictionary
 from app.services.media import sha256_hex, sniff_mime_type
 from app.services.pdf_text import extract_pdf_text, has_selectable_text
 from app.services.vision import ExtractionProvider
@@ -59,11 +62,13 @@ class UploadService:
         sessions: InMemoryExtractSessionStore,
         lab_results: LabResultStore,
         max_upload_bytes: int,
+        dictionary: LoincDictionary | None = None,
     ) -> None:
         self._vision = vision
         self._sessions = sessions
         self._lab_results = lab_results
         self._max_upload_bytes = max_upload_bytes
+        self._dictionary = dictionary if dictionary is not None else load_loinc_dictionary()
 
     async def extract(self, user_id: UUID, payload: bytes) -> ExtractSession:
         """Hash, parse, and forget the original bytes.
@@ -83,7 +88,7 @@ class UploadService:
         digest = sha256_hex(payload)
         raw = await self._parse(payload, mime_type)
         del payload
-        mapped = tuple(map_marker(item) for item in raw.markers)
+        mapped = tuple(map_marker(item, self._dictionary) for item in raw.markers)
         if not mapped:
             raise NoMarkersError
         chronological_age = (
@@ -91,7 +96,11 @@ class UploadService:
         )
         panel = ExtractedPanel(
             document_sha256=digest,
-            parser_version=parser_version_for(self._vision.name, self._vision.model_id),
+            parser_version=parser_version_for(
+                self._vision.name,
+                self._vision.model_id,
+                dictionary_version=self._dictionary.version,
+            ),
             lab_name=raw.lab_name,
             collected_at=parse_collected_at(raw.collected_at),
             chronological_age=chronological_age,
@@ -101,6 +110,9 @@ class UploadService:
         logger.info(
             "lab_extracted",
             marker_count=len(mapped),
+            unmapped_count=sum(
+                1 for marker in mapped if marker.mapping_status is MappingStatus.UNMAPPED
+            ),
             mime_type=mime_type,
             parser_version=panel.parser_version,
         )
@@ -129,7 +141,7 @@ class UploadService:
             markers: Human-edited analyte rows.
         """
         session = self._sessions.pop(extract_token, user_id)
-        mapped = tuple(map_marker(item) for item in markers)
+        mapped = tuple(map_marker(item, self._dictionary) for item in markers)
         if not mapped:
             raise NoMarkersError
         confirmed_at = datetime.now(UTC)

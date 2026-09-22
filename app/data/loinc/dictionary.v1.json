@@ -1,0 +1,306 @@
+{
+  "id": "notmice-loinc",
+  "version": "1.0.0",
+  "license": "CC-BY-4.0",
+  "standard": "LOINC",
+  "markers": [
+    {
+      "id": "albumin",
+      "loinc": "1751-7",
+      "name_en": "Serum Albumin",
+      "name_ru": "Альбумин",
+      "phenoage": true,
+      "canonical_unit": "g/L",
+      "plausible_min": "10",
+      "plausible_max": "70",
+      "synonyms": ["albumin", "serum albumin", "alb", "альбумин", "альбумин сыворотки"],
+      "units": [
+        {"label": "g/L", "aliases": ["g/l", "г/л"], "factor": "1", "divisor": "1"},
+        {"label": "g/dL", "aliases": ["g/dl", "г/дл"], "factor": "10", "divisor": "1"}
+      ]
+    },
+    {
+      "id": "creatinine",
+      "loinc": "2160-0",
+      "name_en": "Serum Creatinine",
+      "name_ru": "Креатинин",
+      "phenoage": true,
+      "canonical_unit": "mg/dL",
+      "plausible_min": "0.1",
+      "plausible_max": "20",
+      "synonyms": ["creatinine", "serum creatinine", "creat", "креатинин"],
+      "units": [
+        {"label": "mg/dL", "aliases": ["mg/dl", "мг/дл"], "factor": "1", "divisor": "1"},
+        {"label": "µmol/L", "aliases": ["umol/l", "мкмоль/л"], "factor": "1", "divisor": "88.4"}
+      ]
+    },
+    {
+      "id": "glucose",
+      "loinc": "2345-7",
+      "name_en": "Fasting Serum Glucose",
+      "name_ru": "Глюкоза",
+      "phenoage": true,
+      "canonical_unit": "mg/dL",
+      "plausible_min": "20",
+      "plausible_max": "800",
+      "synonyms": ["glucose", "fasting glucose", "fasting serum glucose", "глюкоза"],
+      "units": [
+        {"label": "mg/dL", "aliases": ["mg/dl", "мг/дл"], "factor": "1", "divisor": "1"},
+        {"label": "mmol/L", "aliases": ["mmol/l", "ммоль/л"], "factor": "1", "divisor": "0.0555"}
+      ]
+    },
+    {
+      "id": "crp",
+      "loinc": "30522-7",
+      "name_en": "hs-C-Reactive Protein",
+      "name_ru": "СРБ",
+      "phenoage": true,
+      "canonical_unit": "mg/L",
+      "plausible_min": "0",
+      "plausible_max": "400",
+      "synonyms": ["crp", "hs crp", "hs-crp", "c reactive protein", "c-reactive protein", "high sensitivity crp", "срб"],
+      "units": [
+        {"label": "mg/L", "aliases": ["mg/l", "мг/л"], "factor": "1", "divisor": "1"},
+        {"label": "mg/dL", "aliases": ["mg/dl", "мг/дл"], "factor": "10", "divisor": "1"}
+      ]
+    },
+    {
+      "id": "lymphocyte",
+      "loinc": "26474-7",
+      "name_en": "Lymphocyte Percentage",
+      "name_ru": "Лимфоциты",
+      "phenoage": true,
+      "canonical_unit": "%",
+      "plausible_min": "1",
+      "plausible_max": "95",
+      "synonyms": ["lymphocyte", "lymphocyte percentage", "lymphocytes", "lym", "лимфоциты"],
+      "units": [
+        {"label": "%", "aliases": ["percent"], "factor": "1", "divisor": "1"}
+      ]
+    },
+    {
+      "id": "mcv",
+      "loinc": "787-2",
+      "name_en": "Mean Corpuscular Volume",
+      "name_ru": "Средний объем эритроцита",
+      "phenoage": true,
+      "canonical_unit": "fL",
+      "plausible_min": "50",
+      "plausible_max": "140",
+      "synonyms": ["mcv", "mean corpuscular volume", "средний объем эритроцита"],
+      "units": [
+        {"label": "fL", "aliases": ["fl", "фл"], "factor": "1", "divisor": "1"}
+      ]
+    },
+    {
+      "id": "rdw",
+      "loinc": "788-0",
+      "name_en": "Red Cell Distribution Width",
+      "name_ru": "Ширина распределения эритроцитов",
+      "phenoage": true,
+      "canonical_unit": "%",
+      "plausible_min": "8",
+      "plausible_max": "40",
+      "synonyms": ["rdw", "red cell distribution width", "ширина распределения эритроцитов"],
+      "units": [
+        {"label": "%", "aliases": ["percent"], "factor": "1", "divisor": "1"}
+      ]
+    },
+    {
+      "id": "alp",
+      "loinc": "6768-6",
+      "name_en": "Alkaline Phosphatase",
+      "name_ru": "Щелочная фосфатаза",
+      "phenoage": true,
+      "canonical_unit": "U/L",
+      "plausible_min": "1",
+      "plausible_max": "3000",
+      "synonyms": ["alp", "alkaline phosphatase", "щелочная фосфатаза"],
+      "units": [
+        {"label": "U/L", "aliases": ["u/l", "iu/l", "ед/л"], "factor": "1", "divisor": "1"}
+      ]
+    },
+    {
+      "id": "wbc",
+      "loinc": "6690-2",
+      "name_en": "White Blood Cell Count",
+      "name_ru": "Лейкоциты",
+      "phenoage": true,
+      "canonical_unit": "10^3/µL",
+      "plausible_min": "0.1",
+      "plausible_max": "200",
+      "synonyms": ["wbc", "white blood cell", "white blood cell count", "leukocytes", "лейкоциты"],
+      "units": [
+        {
+          "label": "10^3/µL",
+          "aliases": ["10^3/ul", "10*3/ul", "k/ul", "10^9/l", "x10^9/l", "тыс/мкл"],
+          "factor": "1",
+          "divisor": "1"
+        }
+      ]
+    },
+    {
+      "id": "hemoglobin",
+      "loinc": "718-7",
+      "name_en": "Hemoglobin",
+      "name_ru": "Гемоглобин",
+      "phenoage": false,
+      "canonical_unit": "g/L",
+      "plausible_min": "40",
+      "plausible_max": "220",
+      "synonyms": ["hemoglobin", "haemoglobin", "hgb", "hb", "гемоглобин"],
+      "units": [
+        {"label": "g/L", "aliases": ["g/l", "г/л"], "factor": "1", "divisor": "1"},
+        {"label": "g/dL", "aliases": ["g/dl", "г/дл"], "factor": "10", "divisor": "1"}
+      ]
+    },
+    {
+      "id": "hematocrit",
+      "loinc": "4544-3",
+      "name_en": "Hematocrit",
+      "name_ru": "Гематокрит",
+      "phenoage": false,
+      "canonical_unit": "%",
+      "plausible_min": "15",
+      "plausible_max": "70",
+      "synonyms": ["hematocrit", "haematocrit", "hct", "гематокрит"],
+      "units": [
+        {"label": "%", "aliases": ["percent"], "factor": "1", "divisor": "1"}
+      ]
+    },
+    {
+      "id": "platelets",
+      "loinc": "777-3",
+      "name_en": "Platelet Count",
+      "name_ru": "Тромбоциты",
+      "phenoage": false,
+      "canonical_unit": "10^3/µL",
+      "plausible_min": "5",
+      "plausible_max": "2000",
+      "synonyms": ["platelet", "platelets", "platelet count", "plt", "тромбоциты"],
+      "units": [
+        {
+          "label": "10^3/µL",
+          "aliases": ["10^3/ul", "10*3/ul", "k/ul", "10^9/l", "x10^9/l", "тыс/мкл"],
+          "factor": "1",
+          "divisor": "1"
+        }
+      ]
+    },
+    {
+      "id": "alt",
+      "loinc": "1742-6",
+      "name_en": "Alanine Aminotransferase",
+      "name_ru": "АЛТ",
+      "phenoage": false,
+      "canonical_unit": "U/L",
+      "plausible_min": "1",
+      "plausible_max": "5000",
+      "synonyms": ["alt", "alanine aminotransferase", "sgpt", "алт"],
+      "units": [
+        {"label": "U/L", "aliases": ["u/l", "iu/l", "ед/л"], "factor": "1", "divisor": "1"}
+      ]
+    },
+    {
+      "id": "ast",
+      "loinc": "1920-8",
+      "name_en": "Aspartate Aminotransferase",
+      "name_ru": "АСТ",
+      "phenoage": false,
+      "canonical_unit": "U/L",
+      "plausible_min": "1",
+      "plausible_max": "5000",
+      "synonyms": ["ast", "aspartate aminotransferase", "sgot", "аст"],
+      "units": [
+        {"label": "U/L", "aliases": ["u/l", "iu/l", "ед/л"], "factor": "1", "divisor": "1"}
+      ]
+    },
+    {
+      "id": "cholesterol",
+      "loinc": "2093-3",
+      "name_en": "Total Cholesterol",
+      "name_ru": "Холестерин общий",
+      "phenoage": false,
+      "canonical_unit": "mg/dL",
+      "plausible_min": "40",
+      "plausible_max": "800",
+      "synonyms": ["cholesterol", "total cholesterol", "холестерин", "холестерин общий", "общий холестерин"],
+      "units": [
+        {"label": "mg/dL", "aliases": ["mg/dl", "мг/дл"], "factor": "1", "divisor": "1"},
+        {"label": "mmol/L", "aliases": ["mmol/l", "ммоль/л"], "factor": "38.67", "divisor": "1"}
+      ]
+    },
+    {
+      "id": "hdl",
+      "loinc": "2085-9",
+      "name_en": "HDL Cholesterol",
+      "name_ru": "Холестерин ЛПВП",
+      "phenoage": false,
+      "canonical_unit": "mg/dL",
+      "plausible_min": "5",
+      "plausible_max": "200",
+      "synonyms": ["hdl", "hdl cholesterol", "cholesterol in hdl", "холестерин лпвп", "лпвп"],
+      "units": [
+        {"label": "mg/dL", "aliases": ["mg/dl", "мг/дл"], "factor": "1", "divisor": "1"},
+        {"label": "mmol/L", "aliases": ["mmol/l", "ммоль/л"], "factor": "38.67", "divisor": "1"}
+      ]
+    },
+    {
+      "id": "triglycerides",
+      "loinc": "2571-8",
+      "name_en": "Triglycerides",
+      "name_ru": "Триглицериды",
+      "phenoage": false,
+      "canonical_unit": "mg/dL",
+      "plausible_min": "10",
+      "plausible_max": "5000",
+      "synonyms": ["triglycerides", "triglyceride", "tg", "триглицериды"],
+      "units": [
+        {"label": "mg/dL", "aliases": ["mg/dl", "мг/дл"], "factor": "1", "divisor": "1"},
+        {"label": "mmol/L", "aliases": ["mmol/l", "ммоль/л"], "factor": "88.57", "divisor": "1"}
+      ]
+    },
+    {
+      "id": "hba1c",
+      "loinc": "4548-4",
+      "name_en": "Hemoglobin A1c",
+      "name_ru": "Гликированный гемоглобин",
+      "phenoage": false,
+      "canonical_unit": "%",
+      "plausible_min": "3",
+      "plausible_max": "20",
+      "synonyms": ["hba1c", "hemoglobin a1c", "glycated hemoglobin", "a1c", "гликированный гемоглобин"],
+      "units": [
+        {"label": "%", "aliases": ["percent"], "factor": "1", "divisor": "1"}
+      ]
+    },
+    {
+      "id": "tsh",
+      "loinc": "3016-3",
+      "name_en": "Thyrotropin",
+      "name_ru": "ТТГ",
+      "phenoage": false,
+      "canonical_unit": "mIU/L",
+      "plausible_min": "0.01",
+      "plausible_max": "150",
+      "synonyms": ["tsh", "thyrotropin", "thyroid stimulating hormone", "ттг"],
+      "units": [
+        {"label": "mIU/L", "aliases": ["miu/l", "uiu/ml", "мме/л", "мкме/мл"], "factor": "1", "divisor": "1"}
+      ]
+    },
+    {
+      "id": "ferritin",
+      "loinc": "2276-4",
+      "name_en": "Ferritin",
+      "name_ru": "Ферритин",
+      "phenoage": false,
+      "canonical_unit": "ng/mL",
+      "plausible_min": "1",
+      "plausible_max": "20000",
+      "synonyms": ["ferritin", "ферритин"],
+      "units": [
+        {"label": "ng/mL", "aliases": ["ng/ml", "ug/l", "мкг/л", "нг/мл"], "factor": "1", "divisor": "1"}
+      ]
+    }
+  ]
+}

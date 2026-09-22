@@ -1,8 +1,7 @@
-"""Upload/extract domain records, errors, and PhenoAge name mapping."""
+"""Upload/extract domain records and errors."""
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
@@ -11,66 +10,10 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.domain.enums import MappingStatus
+from app.domain.loinc import LoincDictionary, normalize_analyte_name
 
 PARSER_NAME = "notmice-extract"
 PARSER_RELEASE = "1.0"
-
-# Nine Levine PhenoAge markers. Module 4 will replace this with a versioned YAML dictionary.
-_LOINC_TO_CANONICAL: dict[str, str] = {
-    "1751-7": "albumin",
-    "2160-0": "creatinine",
-    "2345-7": "glucose",
-    "30522-7": "crp",
-    "26474-7": "lymphocyte",
-    "787-2": "mcv",
-    "788-0": "rdw",
-    "6768-6": "alp",
-    "6690-2": "wbc",
-}
-
-_NAME_TO_CANONICAL: dict[str, str] = {
-    "albumin": "albumin",
-    "serum albumin": "albumin",
-    "alb": "albumin",
-    "альбумин": "albumin",
-    "creatinine": "creatinine",
-    "serum creatinine": "creatinine",
-    "creat": "creatinine",
-    "креатинин": "creatinine",
-    "glucose": "glucose",
-    "fasting glucose": "glucose",
-    "fasting serum glucose": "glucose",
-    "глюкоза": "glucose",
-    "crp": "crp",
-    "hs crp": "crp",
-    "hs-crp": "crp",
-    "c reactive protein": "crp",
-    "c-reactive protein": "crp",
-    "high sensitivity crp": "crp",
-    "лимфоциты": "lymphocyte",
-    "lymphocyte": "lymphocyte",
-    "lymphocyte percentage": "lymphocyte",
-    "lymphocytes": "lymphocyte",
-    "lym": "lymphocyte",
-    "mcv": "mcv",
-    "mean corpuscular volume": "mcv",
-    "rdw": "rdw",
-    "red cell distribution width": "rdw",
-    "alp": "alp",
-    "alkaline phosphatase": "alp",
-    "щелочная фосфатаза": "alp",
-    "wbc": "wbc",
-    "white blood cell": "wbc",
-    "white blood cell count": "wbc",
-    "leukocytes": "wbc",
-    "лейкоциты": "wbc",
-}
-
-_CANONICAL_TO_LOINC: dict[str, str] = {
-    canonical: loinc for loinc, canonical in _LOINC_TO_CANONICAL.items()
-}
-
-_NORMALIZE_RE = re.compile(r"[^a-z\u0400-\u04FF0-9%]+", re.IGNORECASE)
 
 
 class UploadError(Exception):
@@ -138,6 +81,7 @@ class MappedMarker:
     canonical_id: str | None
     loinc_code: str | None
     mapping_status: MappingStatus
+    within_range: bool | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -173,45 +117,52 @@ class ConfirmedLabResult:
     marker_count: int
 
 
-def parser_version_for(provider: str, model: str) -> str:
+def parser_version_for(provider: str, model: str, *, dictionary_version: str) -> str:
     """Return a provenance parser version string.
 
     Args:
         provider: ``gemini`` or ``claude``.
         model: Provider model id.
+        dictionary_version: LOINC dictionary release used for this extract.
     """
-    return f"{PARSER_NAME}/{PARSER_RELEASE}/{provider}/{model}"
+    return f"{PARSER_NAME}/{PARSER_RELEASE}/{provider}/{model}+loinc-{dictionary_version}"
 
 
-def normalize_analyte_name(name: str) -> str:
-    """Lowercase and strip punctuation so synonyms can match.
+def map_marker(raw: RawMarker, dictionary: LoincDictionary) -> MappedMarker:
+    """Attach a LOINC code when the dictionary knows the analyte name.
 
-    Args:
-        name: Raw label from the document or model.
-    """
-    collapsed = _NORMALIZE_RE.sub(" ", name.strip().lower())
-    return " ".join(collapsed.split())
-
-
-def map_marker(raw: RawMarker) -> MappedMarker:
-    """Attach a PhenoAge canonical id and LOINC when the name is known.
-
-    Unrecognised names stay ``unmapped`` and are not dropped.
+    Unrecognised names stay ``unmapped`` and are not dropped. Known units are
+    scaled to the canonical unit. A value outside the plausible window stays
+    mapped and is flagged so a typo is visible at review.
 
     Args:
         raw: Marker as extracted by pdfplumber or Vision.
+        dictionary: Versioned LOINC catalog.
     """
-    canonical = _NAME_TO_CANONICAL.get(normalize_analyte_name(raw.raw_name))
-    loinc = _CANONICAL_TO_LOINC.get(canonical) if canonical is not None else None
-    status = MappingStatus.MAPPED if canonical is not None else MappingStatus.UNMAPPED
+    entry = dictionary.find(normalize_analyte_name(raw.raw_name))
+    value = Decimal(str(raw.value))
+    if entry is None:
+        return MappedMarker(
+            raw_name=raw.raw_name.strip(),
+            value=value,
+            unit=raw.unit.strip(),
+            confidence=raw.confidence,
+            canonical_id=None,
+            loinc_code=None,
+            mapping_status=MappingStatus.UNMAPPED,
+            within_range=None,
+        )
+    converted = entry.convert(value, raw.unit)
+    within_range = entry.within_range(converted.value) if converted.unit_recognized else None
     return MappedMarker(
         raw_name=raw.raw_name.strip(),
-        value=Decimal(str(raw.value)),
-        unit=raw.unit.strip(),
+        value=converted.value,
+        unit=converted.unit,
         confidence=raw.confidence,
-        canonical_id=canonical,
-        loinc_code=loinc,
-        mapping_status=status,
+        canonical_id=entry.entry_id,
+        loinc_code=entry.loinc,
+        mapping_status=MappingStatus.MAPPED,
+        within_range=within_range,
     )
 
 

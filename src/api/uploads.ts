@@ -28,6 +28,7 @@ interface ExtractedMarkerPayload {
   unit: string;
   confidence: number;
   mapping_status: 'mapped' | 'unmapped';
+  within_range: boolean | null;
 }
 
 interface ExtractPayload {
@@ -77,6 +78,7 @@ function mapMarker(payload: ExtractedMarkerPayload): ExtractedMarker {
     unit: payload.unit,
     confidence: payload.confidence,
     mappingStatus: payload.mapping_status,
+    withinRange: payload.within_range,
   };
 }
 

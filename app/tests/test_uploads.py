@@ -26,6 +26,7 @@ from app.domain.uploads import (
 from app.main import create_app
 from app.services.accounts import AccountService
 from app.services.extract_sessions import InMemoryExtractSessionStore
+from app.services.loinc_dictionary import load_loinc_dictionary
 from app.services.media import sha256_hex
 from app.services.uploads import UploadService
 from app.services.vision import ClaudeExtractionProvider, build_extraction_provider
@@ -170,14 +171,18 @@ def _app(account_service: AccountService, upload_service: UploadService) -> Fast
 
 def test_map_marker_known_and_unmapped() -> None:
     """Albumin maps to LOINC 1751-7; unknown names stay in the unmapped queue."""
-    mapped = map_marker(RawMarker(raw_name="Альбумин", value=46.0, unit="g/L"))
+    dictionary = load_loinc_dictionary()
+    mapped = map_marker(RawMarker(raw_name="Альбумин", value=46.0, unit="g/L"), dictionary)
     assert mapped.canonical_id == "albumin"
     assert mapped.loinc_code == "1751-7"
     assert mapped.mapping_status is MappingStatus.MAPPED
-    unknown = map_marker(RawMarker(raw_name="Vitamin D", value=42.0, unit="ng/mL"))
+    assert mapped.within_range is True
+    unknown = map_marker(RawMarker(raw_name="Vitamin D", value=42.0, unit="ng/mL"), dictionary)
     assert unknown.canonical_id is None
     assert unknown.loinc_code is None
     assert unknown.mapping_status is MappingStatus.UNMAPPED
+    assert unknown.value == Decimal("42")
+    assert unknown.within_range is None
 
 
 def test_claude_provider_is_explicit_stub() -> None:
@@ -228,6 +233,31 @@ async def test_image_uses_vision_media_path() -> None:
     assert vision.text_calls == 0
     assert vision.last_media_mime == "image/jpeg"
     assert session.panel.document_sha256 == sha256_hex(jpeg)
+
+
+@pytest.mark.asyncio
+async def test_confirm_keeps_unmapped_marker() -> None:
+    """An unknown analyte is stored with the panel instead of being dropped."""
+    service, _vision, labs = _upload_bundle()
+    user = UserRecord(id=uuid4(), public_id="nmtest", is_public=False, created_at=datetime.now(UTC))
+    session = await service.extract(user.id, b"\xff\xd8\xff\xe0" + b"\x33" * 32)
+    await service.confirm(
+        user.id,
+        session.token,
+        lab_name=None,
+        collected_at=None,
+        chronological_age=None,
+        markers=(
+            RawMarker(raw_name="Serum Albumin", value=46.0, unit="g/L"),
+            RawMarker(raw_name="Vitamin D", value=42.0, unit="ng/mL"),
+        ),
+    )
+    saved = labs.markers[0]
+    assert len(saved) == 2
+    vitamin_d = saved[1]
+    assert vitamin_d.mapping_status is MappingStatus.UNMAPPED
+    assert vitamin_d.loinc_code is None
+    assert vitamin_d.value == Decimal("42")
 
 
 @pytest.mark.asyncio

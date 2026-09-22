@@ -101,6 +101,7 @@ async def extract_upload(
                 unit=marker.unit,
                 confidence=marker.confidence,
                 mapping_status=marker.mapping_status.value,
+                within_range=marker.within_range,
             )
             for marker in panel.markers
         ],

@@ -57,6 +57,7 @@ export interface ExtractedMarker {
   unit: string;
   confidence: number;
   mappingStatus: 'mapped' | 'unmapped';
+  withinRange: boolean | null;
 }
 
 export interface PhenoAgeCalculation {
