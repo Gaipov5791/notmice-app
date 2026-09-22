@@ -120,13 +120,18 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
             Review & Extraction Verification
           </h1>
           <p className="font-['Inter'] text-sm text-[#3f4850] mt-1">
-            Source document:{' '}
+            {currentPanel.sourceType === 'demo' ? 'Demo fixture: ' : 'Source document: '}
             <strong className="text-[#0b1c30]">
-              {currentPanel.fileName ?? 'Quest_Diagnostics_Panel_2025_08.pdf'}
+              {currentPanel.fileName ?? 'Untitled panel'}
             </strong>{' '}
             • Lab: {currentPanel.labName} • Test Date: {currentPanel.testDate}
             {currentPanel.hash.length === 64 ? ` • SHA-256 ${currentPanel.hash.slice(0, 12)}…` : ''}
           </p>
+          {currentPanel.sourceType === 'demo' && (
+            <p className="font-['Inter'] text-xs text-[#565e74] mt-2">
+              These numbers were not read from a file. Confirming them does not store a lab document.
+            </p>
+          )}
           {confirmError && (
             <p className="font-['Inter'] text-xs text-[#9f1239] mt-2">{confirmError}</p>
           )}

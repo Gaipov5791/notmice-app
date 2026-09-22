@@ -223,7 +223,7 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
                   disabled={isProcessing}
                 />
               </label>
-              <span className="text-xs text-[#94a3b8] font-mono">or try a sample panel below</span>
+              <span className="text-xs text-[#94a3b8] font-mono">Demo fixtures are separate, on the right</span>
             </div>
 
             <div className="pt-4 mt-2 border-t border-[#f1f5f9] w-full flex items-center justify-center gap-6 text-xs text-[#565e74] font-['JetBrains_Mono']">
@@ -281,81 +281,81 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
           </div>
         </div>
 
-        {/* Right Column: Pre-configured Clinical Sample Panels */}
+        {/* Demo fixtures. These buttons do not upload a file. */}
         <div className="lg:col-span-5 flex flex-col gap-4">
-          <div className="bg-[#ffffff] p-6 rounded-xl border border-[#cbd5e1] shadow-xs flex flex-col gap-4">
-            <div className="flex items-center justify-between">
+          <div className="bg-[#f8f9ff] p-6 rounded-xl border border-dashed border-[#94a3b8] flex flex-col gap-4">
+            <div className="flex items-center justify-between gap-3">
               <span className="font-['Inter'] text-sm font-bold text-[#0b1c30] flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[#006194]" />
-                Interactive Preset Lab Panels
+                <Sparkles className="w-4 h-4 text-[#565e74]" />
+                Demo fixtures
               </span>
-              <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]">
-                1-Click Testing
+              <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74] bg-[#ffffff] border border-[#e2e8f0] px-1.5 py-0.5 rounded">
+                Not a file upload
               </span>
             </div>
             <p className="font-['Inter'] text-xs text-[#565e74] leading-relaxed">
-              Don't have your own lab PDF right now? Click any realistic standardized test panel below
-              to inspect the complete end-to-end extraction and PhenoAge workflow.
+              These buttons fill the review screen with sample numbers. They are not read from a
+              PDF, and confirming them does not publish a lab document.
             </p>
 
             {/* Presets List */}
             <div className="flex flex-col gap-3">
               {/* Preset 1: Quest */}
               <button
-                onClick={() => loadPresetPanel('Quest_Diagnostics_Panel_2025_08.pdf', 'quest')}
+                onClick={() => loadPresetPanel('Quest sample', 'quest')}
                 disabled={isProcessing}
-                className="text-left p-3.5 rounded-lg border border-[#e2e8f0] hover:border-[#006194] hover:bg-[#eff4ff] transition-all bg-[#ffffff] group cursor-pointer flex flex-col gap-1 shadow-2xs"
+                className="text-left p-3.5 rounded-lg border border-[#e2e8f0] hover:border-[#006194] hover:bg-[#ffffff] transition-all bg-[#ffffff] group cursor-pointer flex flex-col gap-1"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <span className="font-['Inter'] text-xs font-bold text-[#0b1c30] group-hover:text-[#006194]">
-                    Quest Diagnostics (Longevity Panel)
+                    Quest sample numbers
                   </span>
                   <span className="font-['JetBrains_Mono'] text-[10px] bg-[#4edea3]/20 text-[#006947] font-semibold px-1.5 py-0.5 rounded">
                     Optimal Profile (Age 42)
                   </span>
                 </div>
                 <div className="text-[11px] text-[#565e74] flex items-center justify-between">
-                  <span>9/9 LOINCs • hs-CRP: 0.8 mg/L • Alb: 46.2 g/L</span>
+                  <span>Demo · hs-CRP 0.8 mg/L · Albumin 46.2 g/L</span>
                   <ArrowRight className="w-3.5 h-3.5 text-[#006194] opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </button>
 
               {/* Preset 2: LabCorp */}
               <button
-                onClick={() => loadPresetPanel('LabCorp_Requisition_B7719.pdf', 'labcorp')}
+                onClick={() => loadPresetPanel('LabCorp sample', 'labcorp')}
                 disabled={isProcessing}
-                className="text-left p-3.5 rounded-lg border border-[#e2e8f0] hover:border-[#006194] hover:bg-[#eff4ff] transition-all bg-[#ffffff] group cursor-pointer flex flex-col gap-1 shadow-2xs"
+                className="text-left p-3.5 rounded-lg border border-[#e2e8f0] hover:border-[#006194] hover:bg-[#ffffff] transition-all bg-[#ffffff] group cursor-pointer flex flex-col gap-1"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <span className="font-['Inter'] text-xs font-bold text-[#0b1c30] group-hover:text-[#006194]">
-                    LabCorp Biomarker Comprehensive Profile
+                    LabCorp sample numbers
                   </span>
                   <span className="font-['JetBrains_Mono'] text-[10px] bg-[#eff4ff] text-[#006194] font-semibold px-1.5 py-0.5 rounded">
                     Mild Inflammation (Age 42)
                   </span>
                 </div>
                 <div className="text-[11px] text-[#565e74] flex items-center justify-between">
-                  <span>9/9 LOINCs • hs-CRP: 1.15 mg/L • Alb: 44.8 g/L</span>
+                  <span>Demo · hs-CRP 1.15 mg/L · Albumin 44.8 g/L</span>
                   <ArrowRight className="w-3.5 h-3.5 text-[#006194] opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </button>
 
               {/* Preset 3: NHS */}
               <button
-                onClick={() => loadPresetPanel('NHS_Blood_Sciences_Report_0924.pdf', 'nhs')}
+                onClick={() => loadPresetPanel('NHS sample', 'nhs')}
                 disabled={isProcessing}
-                className="text-left p-3.5 rounded-lg border border-[#e2e8f0] hover:border-[#006194] hover:bg-[#eff4ff] transition-all bg-[#ffffff] group cursor-pointer flex flex-col gap-1 shadow-2xs"
+                className="text-left p-3.5 rounded-lg border border-[#e2e8f0] hover:border-[#006194] hover:bg-[#ffffff] transition-all bg-[#ffffff] group cursor-pointer flex flex-col gap-1"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <span className="font-['Inter'] text-xs font-bold text-[#0b1c30] group-hover:text-[#006194]">
-                    NHS Core Clinical Biochemistry Report
+                    NHS sample numbers
                   </span>
                   <span className="font-['JetBrains_Mono'] text-[10px] bg-[#fff1f2] text-[#ba1a1a] font-semibold px-1.5 py-0.5 rounded">
                     Baseline Entry (Age 41)
                   </span>
                 </div>
                 <div className="text-[11px] text-[#565e74] flex items-center justify-between">
-                  <span>9/9 LOINCs • hs-CRP: 1.6 mg/L • Alb: 43.5 g/L</span>
+                  <span>Demo · hs-CRP 1.6 mg/L · Albumin 43.5 g/L</span>
                   <ArrowRight className="w-3.5 h-3.5 text-[#006194] opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </button>

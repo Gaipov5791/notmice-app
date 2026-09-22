@@ -139,7 +139,7 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
               </div>
               <div className="flex items-center sm:justify-end gap-1 text-[#006947] font-semibold text-[11px]">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>ZK Cryptographic Record</span>
+                <span>Research index, Levine 2018</span>
               </div>
             </div>
           </div>
@@ -229,7 +229,6 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
                     <th className="py-2.5 px-3 font-semibold">Biological PhenoAge</th>
                     <th className="py-2.5 px-3 font-semibold">Variance (Δ)</th>
                     <th className="py-2.5 px-3 font-semibold">Clinical Status</th>
-                    <th className="py-2.5 px-3 font-semibold">ZK Hash</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#e2e8f0]">
@@ -269,9 +268,6 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
                             <CheckCircle className="w-3.5 h-3.5" />
                             {isDecel ? 'Decelerated Aging' : 'Standard Baseline'}
                           </span>
-                        </td>
-                        <td className="py-2.5 px-3 font-['JetBrains_Mono'] text-[10px] text-[#94a3b8]">
-                          {item.hash ? item.hash.substring(0, 14) + '...' : 'Verified'}
                         </td>
                       </tr>
                     );

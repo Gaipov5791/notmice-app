@@ -70,15 +70,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             <h1 className="font-['Inter'] text-3xl sm:text-4xl lg:text-[44px] leading-tight lg:leading-[52px] text-[#0b1c30] tracking-tight font-bold">
               Transform Your Blood Panels into Biological Insights.{' '}
               <span className="text-[#006194] underline decoration-[#006194]/30 underline-offset-8">
-                Zero Cloud Retention.
+                Original files are not stored.
               </span>
             </h1>
 
             {/* Value Proposition */}
             <p className="font-['Inter'] text-base text-[#3f4850] max-w-2xl leading-relaxed">
-              NotMice extracts validated clinical biomarkers from your laboratory PDFs in browser
-              memory, calculates phenotypic biological age (Levine PhenoAge), and gives you
-              cryptographic ownership over your longitudinal health trajectory.
+              NotMice reads a lab PDF on the server, asks you to confirm the numbers, and calculates
+              PhenoAge as a research index. Confirmed values join the public dataset only if you
+              turn sharing on.
             </p>
 
             {/* CTA Cluster */}
@@ -108,7 +108,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   Runtime Execution
                 </span>
                 <span className="font-['JetBrains_Mono'] text-xs text-[#006947] font-bold flex items-center gap-1.5">
-                  <Cpu className="w-3.5 h-3.5" /> WebAssembly 2.0
+                  <Cpu className="w-3.5 h-3.5" /> Server extract
                 </span>
               </div>
               <div className="bg-[#ffffff] p-3.5 rounded border border-[#e2e8f0] shadow-xs flex flex-col gap-0.5">
@@ -116,7 +116,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   Biomarker Standard
                 </span>
                 <span className="font-['JetBrains_Mono'] text-xs text-[#0b1c30] font-semibold flex items-center gap-1.5">
-                  <Database className="w-3.5 h-3.5 text-[#006194]" /> LOINC & SNOMED
+                  <Database className="w-3.5 h-3.5 text-[#006194]" /> LOINC dictionary
                 </span>
               </div>
               <div className="bg-[#ffffff] p-3.5 rounded border border-[#e2e8f0] shadow-xs flex flex-col gap-0.5 col-span-2 sm:col-span-1">
@@ -341,8 +341,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               </h2>
             </div>
             <p className="font-['Inter'] text-sm text-[#3f4850] max-w-xl">
-              From unformatted clinical PDF to encrypted multi-dimensional cohort validation in under
-              800 milliseconds.
+              A lab PDF is read on the server, checked by you, then scored with the Levine 2018 index.
             </p>
           </div>
 
@@ -363,13 +362,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   Raw PDF Intake
                 </span>
                 <p className="font-['Inter'] text-xs text-[#3f4850] leading-relaxed">
-                  Direct drag-and-drop of Quest, LabCorp, or NHS laboratory diagnostics. PDF rendering
-                  happens strictly in browser canvas.
+                  Drop a lab PDF or scan. The server reads it in memory and does not write the
+                  original file to disk.
                 </p>
               </div>
               <div className="mt-auto pt-3 flex items-center gap-1.5 text-[#565e74] font-['JetBrains_Mono'] text-[11px]">
                 <Lock className="w-3.5 h-3.5 text-[#006947]" />
-                <span>Zero byte upload over network</span>
+                <span>SHA-256 kept in provenance</span>
               </div>
             </div>
 
@@ -385,16 +384,16 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               </div>
               <div className="flex flex-col gap-1 mt-1">
                 <span className="font-['Inter'] text-base font-bold text-[#0b1c30]">
-                  Local OCR Extraction
+                  Server extraction
                 </span>
                 <p className="font-['Inter'] text-xs text-[#3f4850] leading-relaxed">
-                  Tesseract WebAssembly extracts tabular blood indices and maps them directly to
-                  standardized international LOINC identifiers.
+                  Text PDFs are read with pdfplumber. Scans go to a vision model on the server, then
+                  names are matched to the versioned LOINC dictionary.
                 </p>
               </div>
               <div className="mt-auto pt-3 flex items-center gap-1.5 text-[#565e74] font-['JetBrains_Mono'] text-[11px]">
                 <Zap className="w-3.5 h-3.5 text-[#006947]" />
-                <span>Client-side WebWorker: ~320ms</span>
+                <span>Unmatched names stay in the unmapped queue</span>
               </div>
             </div>
 
@@ -413,8 +412,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   Human-in-the-Loop
                 </span>
                 <p className="font-['Inter'] text-xs text-[#3f4850] leading-relaxed">
-                  Side-by-side verification view displays high-confidence extractions alongside
-                  original snippet crops for researcher sign-off.
+                  You check and edit the extracted numbers before they are saved. Nothing is stored
+                  as a confirmed result until you sign off.
                 </p>
               </div>
               <div className="mt-auto pt-3 flex items-center gap-1.5 text-[#565e74] font-['JetBrains_Mono'] text-[11px]">
@@ -435,16 +434,16 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               </div>
               <div className="flex flex-col gap-1 mt-1">
                 <span className="font-['Inter'] text-base font-bold text-[#0b1c30]">
-                  PhenoAge & Dual-Sync
+                  PhenoAge and opt-in sharing
                 </span>
                 <p className="font-['Inter'] text-xs text-[#3f4850] leading-relaxed">
-                  Deterministic Gompertz hazard rate execution. Encrypts locally and optionally pushes
-                  anonymized vector points to open science cohorts.
+                  PhenoAge is the Levine 2018 research index, not a medical service. If you opt in,
+                  anonymized rows appear in the public API and the CC0 export.
                 </p>
               </div>
               <div className="mt-auto pt-3 flex items-center gap-1.5 text-[#565e74] font-['JetBrains_Mono'] text-[11px]">
                 <Share2 className="w-3.5 h-3.5 text-[#006947]" />
-                <span>Parquet / IPFS data dual-layer</span>
+                <span>CSV, Parquet, and datasheet</span>
               </div>
             </div>
           </div>
@@ -471,7 +470,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       <section className="w-full max-w-[1440px] mx-auto px-4 lg:px-8 py-12">
         <div className="flex flex-col gap-1 mb-6">
           <span className="font-['JetBrains_Mono'] text-xs text-[#006194] font-bold uppercase tracking-wider">
-            Cryptographic Guarantees
+            Privacy and method
           </span>
           <h2 className="font-['Inter'] text-2xl lg:text-3xl text-[#0b1c30] font-bold">
             Trust & Verification Protocol
@@ -485,18 +484,21 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <div className="w-11 h-11 rounded bg-[#4edea3]/20 text-[#006947] flex items-center justify-center">
                 <Cpu className="w-6 h-6 text-[#006947]" />
               </div>
-              <h3 className="font-['Inter'] text-xl text-[#0b1c30] font-bold">In-Memory Only OCR</h3>
+              <h3 className="font-['Inter'] text-xl text-[#0b1c30] font-bold">
+                Original files are not stored
+              </h3>
               <p className="font-['Inter'] text-sm text-[#3f4850] leading-relaxed">
-                Raw documents and lab scans are processed client-side and never written to cold
-                storage disks or databases. Everything dissolves upon tab termination.
+                The server reads the PDF in memory and keeps a SHA-256 in provenance. The original
+                file is not written to disk. Confirmed biomarker values are stored in Postgres after
+                you approve them.
               </p>
             </div>
             <div className="pt-4 mt-6 bg-[#eff4ff] p-3 rounded flex flex-col gap-1 border border-[#dce9ff]">
               <span className="font-['JetBrains_Mono'] text-[10px] text-[#565e74] uppercase font-medium">
-                Memory Safety Matrix
+                What is kept
               </span>
               <span className="font-['JetBrains_Mono'] text-xs text-[#0b1c30] font-semibold">
-                WebAssembly SharedArrayBuffer Isolation
+                SHA-256, confirmed values, opt-in flag
               </span>
             </div>
           </div>
@@ -541,10 +543,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </div>
             <div className="pt-4 mt-6 bg-[#eff4ff] p-3 rounded flex flex-col gap-1 border border-[#dce9ff]">
               <span className="font-['JetBrains_Mono'] text-[10px] text-[#565e74] uppercase font-medium">
-                Zero-Knowledge Export
+                Public export
               </span>
               <span className="font-['JetBrains_Mono'] text-xs text-[#0b1c30] font-semibold">
-                Parquet v2.6 + IPFS CID Fingerprint
+                CC0-1.0 CSV, Parquet, datasheet
               </span>
             </div>
           </div>
@@ -686,8 +688,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               Ready to quantify your rate of biological aging?
             </span>
             <span className="font-['Inter'] text-xs opacity-90">
-              No account creation required. Generate a private cryptographic keypair and inspect
-              your lab PDFs immediately.
+              Sign in with a recovery phrase, upload a lab PDF, and review the extracted numbers.
             </span>
           </div>
           <div className="flex items-center gap-3 shrink-0">
@@ -696,7 +697,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               className="bg-[#ffffff] text-[#006194] hover:bg-[#eff4ff] font-['Inter'] text-sm px-6 py-3 rounded font-bold transition-colors shadow-sm flex items-center gap-2 cursor-pointer"
               id="btn-bottom-start"
             >
-              <span>Run In-Browser Analysis</span>
+              <span>Upload a lab PDF</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>

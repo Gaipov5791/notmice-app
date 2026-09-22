@@ -132,7 +132,7 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="bg-[#cce5ff] text-[#004b73] font-['JetBrains_Mono'] text-xs font-semibold px-2 py-0.5 rounded">
-              Cryptographic Charter
+              Research charter
             </span>
             <span className="font-['JetBrains_Mono'] text-xs text-[#565e74]">
               Data Sovereignty & Open Science
@@ -142,9 +142,8 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
             Data Sovereignty & Public Sharing
           </h1>
           <p className="font-['Inter'] text-sm text-[#3f4850] mt-1 max-w-2xl">
-            You maintain cryptographic ownership of your longevity telemetry. No surveillance, no
-            tracking cookies, no remote data retention. Export your data or anonymously pool it for
-            translational longevity science.
+            Confirmed biomarker rows stay on a pseudonymous id. Original lab files are not stored.
+            Turn sharing on to include those rows in the public CC0 dataset.
           </p>
         </div>
 
@@ -161,7 +160,7 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
 
       {/* Main Grid: Export Modules vs Decentralized Cohort Sharing */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column: Zero-Knowledge Export Vault */}
+        {/* Public dataset export */}
         <div className="lg:col-span-6 flex flex-col gap-6">
           <div className="bg-[#ffffff] p-6 rounded-xl border border-[#cbd5e1] shadow-xs flex flex-col gap-4">
             <div className="flex items-center justify-between">
@@ -335,7 +334,7 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
               </label>
             </div>
 
-            {/* IPFS Hash Preview */}
+            {/* Public sharing status */}
             {isPublic && (
               <div className="p-3 bg-[#f8f9ff] rounded border border-[#dce9ff] flex flex-col gap-1.5 text-xs animate-in fade-in">
                 <span className="font-['JetBrains_Mono'] text-[#006947] font-semibold">

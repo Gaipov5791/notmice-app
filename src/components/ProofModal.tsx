@@ -13,7 +13,6 @@ interface ProofModalProps {
 export const ProofModal: React.FC<ProofModalProps> = ({
   isOpen,
   onClose,
-  hash,
   biomarkers,
   phenoAge,
   chronologicalAge,
@@ -31,10 +30,10 @@ export const ProofModal: React.FC<ProofModalProps> = ({
             </div>
             <div>
               <h3 className="font-['Inter'] text-base font-bold text-[#0b1c30]">
-                Zero-Knowledge Cryptographic Proof
+                PhenoAge research index
               </h3>
               <p className="font-['JetBrains_Mono'] text-xs text-[#565e74]">
-                Proof Protocol: NotMice-WASM-Gompertz-v1.4
+                Levine et al., Aging 2018. Not a medical service.
               </p>
             </div>
           </div>
@@ -53,38 +52,27 @@ export const ProofModal: React.FC<ProofModalProps> = ({
             <CheckCircle className="w-5 h-5 text-[#006947] shrink-0 mt-0.5" />
             <div className="text-sm">
               <span className="font-bold text-[#0b1c30] block">
-                Deterministic Execution Verified Client-Side
+                Calculated from the numbers on this screen
               </span>
               <span className="text-[#3f4850] text-xs leading-relaxed">
-                The biological age score was evaluated inside an isolated WebAssembly memory sandbox.
-                Zero bytes of unencrypted clinical data were transmitted to external servers.
+                The score uses the Levine 2018 formula on the server. It is a research index, not a
+                diagnosis or a treatment recommendation.
               </span>
             </div>
           </div>
 
-          {/* Cryptographic Hashes */}
           <div className="space-y-2">
             <label className="font-['Inter'] text-xs font-semibold text-[#0b1c30] uppercase tracking-wider block">
-              Cryptographic Signatures & Hashes
+              Method
             </label>
             <div className="bg-[#f8f9ff] border border-[#e2e8f0] p-3 rounded font-['JetBrains_Mono'] text-xs space-y-2 text-[#3f4850]">
-              <div className="flex justify-between items-center">
-                <span className="text-[#565e74]">State Leaf Hash:</span>
-                <span className="text-[#006194] font-semibold">{hash}</span>
+              <div className="flex justify-between items-center gap-4">
+                <span className="text-[#565e74]">Citation:</span>
+                <span className="text-[#0b1c30] text-right">Aging (Albany NY) 2018; 10(4):573–591</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[#565e74]">Execution Digest:</span>
-                <span className="text-[#006947] font-semibold">
-                  0x8fbc73d9e210a4e27f09cc9115b8214
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[#565e74]">Algorithm Citation:</span>
-                <span className="text-[#0b1c30]">Aging (Albany NY) 2018; 10(4):573–591</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[#565e74]">Gompertz Baseline (γ):</span>
-                <span className="text-[#0b1c30]">0.0076927 (NHANES IV Calibrated)</span>
+              <div className="flex justify-between items-center gap-4">
+                <span className="text-[#565e74]">Inputs:</span>
+                <span className="text-[#0b1c30]">9 LOINC biomarkers and chronological age</span>
               </div>
             </div>
           </div>
@@ -102,7 +90,7 @@ export const ProofModal: React.FC<ProofModalProps> = ({
                 </div>
                 <div className="text-[#565e74] space-y-0.5 font-mono text-[11px]">
                   <p>Chronological: {chronologicalAge.toFixed(1)} yrs</p>
-                  <p>Biomarkers verified: 9/9 LOINC</p>
+                  <p>PhenoAge markers: 9</p>
                   <p>Albumin: {biomarkers['albumin'] ?? 46.0} g/L</p>
                   <p>hs-CRP: {biomarkers['crp'] ?? 0.8} mg/L</p>
                 </div>
@@ -114,9 +102,9 @@ export const ProofModal: React.FC<ProofModalProps> = ({
                 </div>
                 <div className="text-[#565e74] space-y-0.5 font-mono text-[11px]">
                   <p>Biological PhenoAge: {phenoAge.toFixed(1)} yrs</p>
-                  <p>Age Variance (Δ): {(phenoAge - chronologicalAge).toFixed(1)} yrs</p>
-                  <p>Isolation: SharedArrayBuffer</p>
-                  <p>Persistence: Ephemeral RAM</p>
+                  <p>Age difference: {(phenoAge - chronologicalAge).toFixed(1)} yrs</p>
+                  <p>Where: server, Levine 2018</p>
+                  <p>Use: research index only</p>
                 </div>
               </div>
             </div>
@@ -125,7 +113,7 @@ export const ProofModal: React.FC<ProofModalProps> = ({
           <div className="bg-[#eff4ff] p-3 rounded text-xs text-[#3f4850] flex items-center gap-2">
             <FileCheck className="w-4 h-4 text-[#006194] shrink-0" />
             <span>
-              All 9 LOINC codes cross-referenced against Regenstrief LOINC 2024.2 specifications.
+              The nine PhenoAge markers use the versioned LOINC dictionary shipped with the API.
             </span>
           </div>
         </div>

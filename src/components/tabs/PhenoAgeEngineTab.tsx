@@ -123,7 +123,7 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
             className="flex items-center gap-2 px-4 py-2 rounded font-['Inter'] text-xs font-bold bg-[#006194] hover:bg-[#007bb9] text-[#ffffff] shadow-sm transition-all cursor-pointer"
           >
             <ShieldCheck className="w-4 h-4" />
-            <span>ZK Proof</span>
+            <span>Index details</span>
           </button>
         </div>
       </div>

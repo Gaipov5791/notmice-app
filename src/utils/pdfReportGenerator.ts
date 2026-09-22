@@ -64,7 +64,7 @@ export function generateHistoricalReportPDF(history: HistoricalTestRecord[]): vo
   });
   doc.text(`Generated: ${printDate}`, pageWidth - margin, 15, { align: 'right' });
   doc.text(`Panels Evaluated: ${sortedHistory.length}`, pageWidth - margin, 21, { align: 'right' });
-  doc.text(`Status: Verified ZK Cryptographic Record`, pageWidth - margin, 27, { align: 'right' });
+  doc.text('Status: Research index (Levine 2018)', pageWidth - margin, 27, { align: 'right' });
 
   let currentY = 48;
 
@@ -154,13 +154,12 @@ export function generateHistoricalReportPDF(history: HistoricalTestRecord[]): vo
       `${item.phenoAge.toFixed(1)} yrs`,
       deltaStr,
       statusStr,
-      item.hash ? item.hash.substring(0, 16) + '...' : 'Verified',
     ];
   });
 
   autoTable(doc, {
     startY: currentY,
-    head: [['Test Date', 'Lab Facility', 'Calendar Age', 'PhenoAge™', 'Variance (Δ)', 'Clinical Profile', 'Validation Hash']],
+    head: [['Test Date', 'Lab Facility', 'Calendar Age', 'PhenoAge™', 'Variance (Δ)', 'Clinical Profile']],
     body: panelRows,
     theme: 'striped',
     styles: {

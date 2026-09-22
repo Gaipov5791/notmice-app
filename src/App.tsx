@@ -391,7 +391,7 @@ export default function App() {
         onConfirmPhraseSaved={() => setRevealedMnemonic(null)}
       />
 
-      {/* WebAssembly Terminal Modal */}
+      {/* Session log */}
       <TerminalModal
         isOpen={isTerminalModalOpen}
         onClose={() => setIsTerminalModalOpen(false)}

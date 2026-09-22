@@ -15,13 +15,10 @@ export const TerminalModal: React.FC<TerminalModalProps> = ({
   phenoAge,
 }) => {
   const [logs, setLogs] = useState<string[]>([
-    `[WASM_INIT] WebAssembly 2.0 runtime initialized with SIMD acceleration.`,
-    `[MEM_SANDBOX] Allocated isolated SharedArrayBuffer (4096 KB) at 0x00A8F00.`,
-    `[CRYPTO] Ephemeral session key generated for node ${accountAddress}.`,
-    `[LOINC_DICTIONARY] Loaded 9 PhenoAge target codes from LOINC 2024.2 specs.`,
-    `[PHENOAGE] Research index (Levine 2018). Not a medical service.`,
-    `[EXEC_STATUS] Active PhenoAge calculation verified: ${phenoAge.toFixed(1)} yrs.`,
-    `[AUDIT] Zero network transmissions detected. In-memory data integrity: 100%.`,
+    `[SESSION] Public id ${accountAddress}.`,
+    `[PHENOAGE] Research index (Levine 2018): ${phenoAge.toFixed(1)} years. Not a medical service.`,
+    `[LOINC] Dictionary v1. PhenoAge uses 9 of 20 markers.`,
+    `[FILES] Original PDFs are not stored. Confirmed values are saved after review.`,
   ]);
   const [inputCmd, setInputCmd] = useState('');
 
@@ -35,13 +32,13 @@ export const TerminalModal: React.FC<TerminalModalProps> = ({
     const newLogs = [...logs, `> ${inputCmd}`];
 
     if (cmd === 'help') {
-      newLogs.push('Available commands: status, loinc, memory, purge, cite, clear');
+      newLogs.push('Available commands: status, loinc, privacy, cite, clear');
     } else if (cmd === 'status') {
-      newLogs.push(`Node: ${accountAddress} | PhenoAge: ${phenoAge.toFixed(1)} | Isolated: true`);
+      newLogs.push(`Public id: ${accountAddress} | PhenoAge: ${phenoAge.toFixed(1)} years`);
     } else if (cmd === 'loinc') {
-      newLogs.push('Active LOINC codes: 1751-7, 2160-0, 2345-7, 30522-7, 26474-7, 787-2, 788-0, 6768-6, 6690-2');
-    } else if (cmd === 'memory') {
-      newLogs.push('SharedArrayBuffer: 4096 KB (128 KB active). Cold storage write: 0 bytes.');
+      newLogs.push('PhenoAge LOINC codes: 1751-7, 2160-0, 2345-7, 30522-7, 26474-7, 787-2, 788-0, 6768-6, 6690-2');
+    } else if (cmd === 'privacy') {
+      newLogs.push('Original lab files are not written to disk. Confirmed biomarker values are stored in Postgres. A profile appears in the public export only after opt-in.');
     } else if (cmd === 'cite') {
       newLogs.push('Levine ME et al. Aging (Albany NY) 2018; 10(4):573–591. DOI:10.18632/aging.101414');
     } else if (cmd === 'clear') {
@@ -67,7 +64,7 @@ export const TerminalModal: React.FC<TerminalModalProps> = ({
             <span className="w-2.5 h-2.5 rounded-full bg-[#10b981]"></span>
             <span className="text-[#bec6e0] ml-2 flex items-center gap-1.5 font-medium">
               <TerminalIcon className="w-3.5 h-3.5 text-[#4edea3]" />
-              NotMice WebAssembly Console • In-Memory REPL
+              NotMice session log
             </span>
           </div>
           <button
@@ -86,7 +83,7 @@ export const TerminalModal: React.FC<TerminalModalProps> = ({
               className={`${
                 log.startsWith('>')
                   ? 'text-[#4edea3] font-bold'
-                  : log.includes('WASM') || log.includes('GOMPERTZ')
+                  : log.includes('PHENOAGE') || log.includes('FILES')
                   ? 'text-[#93ccff]'
                   : 'text-[#bec6e0]'
               }`}

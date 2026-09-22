@@ -104,17 +104,16 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
           </button>
 
-          {/* Zero Knowledge badge */}
           <div className="hidden sm:flex items-center gap-1.5 bg-[#eff4ff] text-[#3f4850] px-2.5 py-1.5 rounded font-['JetBrains_Mono'] text-[11px] border border-[#dce9ff]">
             <Shield className="w-3.5 h-3.5 text-[#006947]" />
-            <span className="font-medium">Zero-Knowledge</span>
+            <span className="font-medium">No raw files</span>
           </div>
 
           {/* Key generation modal toggle */}
           <button
             onClick={onOpenSeedPhrase}
-            aria-label="Seed Phrase and Vault"
-            title="Seed Phrase and Vault"
+            aria-label="Account recovery phrase"
+            title="Account recovery phrase"
             className="flex items-center gap-1 text-[#3f4850] hover:text-[#0b1c30] bg-[#eff4ff] hover:bg-[#e5eeff] p-2 rounded transition-colors border border-[#dce9ff] cursor-pointer"
           >
             <KeyRound className="w-4 h-4 text-[#006194]" />
@@ -123,8 +122,8 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Terminal button */}
           <button
             onClick={onOpenTerminal}
-            aria-label="Account and Node Settings"
-            title="WASM Isolation & Terminal Logs"
+            aria-label="Session log"
+            title="Session log"
             className="flex items-center gap-1 text-[#3f4850] hover:text-[#0b1c30] bg-[#eff4ff] hover:bg-[#e5eeff] p-2 rounded transition-colors border border-[#dce9ff] cursor-pointer"
           >
             <Terminal className="w-4 h-4 text-[#3f4850]" />
