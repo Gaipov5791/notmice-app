@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { TabType, LabPanelData, HistoricalTestRecord, AccountState, PhenoAgeCalculation } from './types';
-import { INITIAL_BIOMARKERS, INITIAL_HISTORY, PRESET_LAB_PANELS } from './data/phenoAgeData';
+import { INITIAL_BIOMARKERS } from './data/phenoAgeData';
 import { PHENOAGE_DISCLAIMER, fetchPhenoAge, PhenoAgeScore } from './api/phenoage';
 import { displayBiomarkerScores, displayPercentile, generateCryptoHash } from './utils/phenoAgeMath';
 import {
@@ -26,11 +26,27 @@ import { SeedPhraseModal } from './components/SeedPhraseModal';
 import { TerminalModal } from './components/TerminalModal';
 import { Footer } from './components/Footer';
 
+function tutorialPanel(): LabPanelData {
+  return {
+    id: 'panel-tutorial',
+    labName: 'Tutorial example',
+    testDate: '—',
+    sourceType: 'demo',
+    fileName: 'Worked example, not a laboratory file',
+    chronologicalAge: 42.0,
+    gender: 'male',
+    biomarkers: { ...INITIAL_BIOMARKERS },
+    confidenceScores: {},
+    verified: false,
+    hash: '',
+  };
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('overview-landing');
   const [chronologicalAge, setChronologicalAge] = useState<number>(42.0);
   const [biomarkers, setBiomarkers] = useState<Record<string, number>>(INITIAL_BIOMARKERS);
-  const [history, setHistory] = useState<HistoricalTestRecord[]>(INITIAL_HISTORY);
+  const [history, setHistory] = useState<HistoricalTestRecord[]>([]);
   const [account, setAccount] = useState<AccountState | null>(null);
   const [revealedMnemonic, setRevealedMnemonic] = useState<string[] | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
@@ -43,20 +59,7 @@ export default function App() {
   const [isSeedPhraseModalOpen, setIsSeedPhraseModalOpen] = useState(false);
   const [isTerminalModalOpen, setIsTerminalModalOpen] = useState(false);
 
-  // Active panel loaded from upload
-  const [currentPanel, setCurrentPanel] = useState<LabPanelData>({
-    id: 'panel-init',
-    labName: PRESET_LAB_PANELS.quest.source,
-    testDate: PRESET_LAB_PANELS.quest.date,
-    sourceType: 'demo',
-    fileName: PRESET_LAB_PANELS.quest.fileName,
-    chronologicalAge: 42.0,
-    gender: 'male',
-    biomarkers: { ...PRESET_LAB_PANELS.quest.values },
-    confidenceScores: { ...PRESET_LAB_PANELS.quest.confidence },
-    verified: true,
-    hash: '0x8fbc...19a4',
-  });
+  const [currentPanel, setCurrentPanel] = useState<LabPanelData>(tutorialPanel);
 
   useEffect(() => {
     const token = readStoredToken();
@@ -173,9 +176,10 @@ export default function App() {
   };
 
   const handlePurgeMemory = () => {
-    setBiomarkers(INITIAL_BIOMARKERS);
+    setBiomarkers({ ...INITIAL_BIOMARKERS });
     setChronologicalAge(42.0);
-    setHistory(INITIAL_HISTORY.slice(0, 2));
+    setHistory([]);
+    setCurrentPanel(tutorialPanel());
   };
 
   const handleCreateAccount = async () => {

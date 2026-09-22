@@ -12,11 +12,8 @@ export const Footer: React.FC = () => {
           <span>Citations: Levine et al. PhenoAge Algorithm</span>
         </div>
         <div className="flex items-center gap-4 font-['JetBrains_Mono'] text-xs text-[#565e74]">
-          <span className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#00855b]"></span>
-            SHA-256 Engine: Verified
-          </span>
-          <span>LOINC Protocol Sync: 2024.2</span>
+          <span>Original lab files are not stored</span>
+          <span>LOINC dictionary v1</span>
         </div>
       </div>
     </footer>

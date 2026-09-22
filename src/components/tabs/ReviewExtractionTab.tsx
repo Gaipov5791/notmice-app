@@ -120,7 +120,7 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
             Review & Extraction Verification
           </h1>
           <p className="font-['Inter'] text-sm text-[#3f4850] mt-1">
-            {currentPanel.sourceType === 'demo' ? 'Demo fixture: ' : 'Source document: '}
+            {currentPanel.sourceType === 'demo' ? 'Tutorial example: ' : 'Source document: '}
             <strong className="text-[#0b1c30]">
               {currentPanel.fileName ?? 'Untitled panel'}
             </strong>{' '}
@@ -129,7 +129,7 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
           </p>
           {currentPanel.sourceType === 'demo' && (
             <p className="font-['Inter'] text-xs text-[#565e74] mt-2">
-              These numbers were not read from a file. Confirming them does not store a lab document.
+              These numbers are a worked example, not a patient panel. Confirming them does not store a lab document.
             </p>
           )}
           {confirmError && (
@@ -290,11 +290,13 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
                   Extracted Biomarker Matrix
                 </span>
                 <span className="font-['Inter'] text-xs text-[#565e74]">
-                  Verify each value against your physical or digital lab paper.
+                  {currentPanel.sourceType === 'demo'
+                    ? 'Worked example. These values were not read from a laboratory file.'
+                    : 'Verify each value against your physical or digital lab paper.'}
                 </span>
               </div>
               <span className="font-['JetBrains_Mono'] text-xs bg-[#ffffff] border border-[#dce9ff] px-2.5 py-1 rounded text-[#006947] font-bold">
-                9/9 Extracted
+                {currentPanel.sourceType === 'demo' ? 'Tutorial' : '9/9 Extracted'}
               </span>
             </div>
 

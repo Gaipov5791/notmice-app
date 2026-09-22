@@ -16,13 +16,13 @@ export const StatusRibbon: React.FC<StatusRibbonProps> = ({ biomarkers }) => {
       <div className="max-w-[1440px] mx-auto flex flex-wrap items-center justify-between gap-y-2 gap-x-4">
         {/* Stream label */}
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#00855b] animate-pulse"></span>
+          <span className="w-2 h-2 rounded-full bg-[#006194]"></span>
           <span className="font-['JetBrains_Mono'] text-[11px] text-[#3f4850] font-semibold uppercase tracking-wider">
-            Engine Stream
+            Tutorial example
           </span>
           <span className="text-[#3f4850] font-mono text-[11px]">•</span>
           <span className="font-['Inter'] text-[12px] text-[#0b1c30] font-semibold">
-            Levine Cohort Weights: NHANES IV Calibrated
+            Not a patient panel • Levine 2018 weights
           </span>
         </div>
 

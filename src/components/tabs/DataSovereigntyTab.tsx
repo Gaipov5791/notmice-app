@@ -364,8 +364,8 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
             <p className="font-['Inter'] text-xs opacity-90 leading-relaxed">
               "We reject the reliance on short-lived murine longevity experiments as the primary basis
               for human healthspan interventions. Human aging is multidimensional, immune-complex, and
-              longitudinal. NotMice equips the individual with decentralized analytical sovereignty to
-              measure, track, and optimize human longevity in real time."
+              longitudinal. NotMice lets a person confirm their own blood numbers and follow a
+              research aging index over time."
             </p>
           </div>
         </div>

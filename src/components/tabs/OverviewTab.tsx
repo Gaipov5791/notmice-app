@@ -144,12 +144,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       PhenoAge™ Engine Score
                     </span>
                     <span className="font-['JetBrains_Mono'] text-xs text-[#565e74]">
-                      Run #0x4E91 • Client-Side Validated
+                      Tutorial example • calculated on the server
                     </span>
                   </div>
                 </div>
-                <span className="bg-[#4edea3]/20 text-[#006947] font-['JetBrains_Mono'] text-xs px-2 py-1 rounded font-bold">
-                  9/9 LOINCs Verified
+                <span className="bg-[#eff4ff] text-[#004b73] font-['JetBrains_Mono'] text-xs px-2 py-1 rounded font-bold">
+                  Worked example
                 </span>
               </div>
 
@@ -280,11 +280,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 </div>
               </div>
 
-              {/* Cryptographic Validation Seal & Longevity Advisor Link */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[#eff4ff] p-2.5 rounded border border-[#dce9ff] text-[#3f4850] font-['JetBrains_Mono'] text-xs">
                 <div className="flex items-center gap-1.5 truncate">
                   <ShieldCheck className="w-4 h-4 text-[#006947] shrink-0" />
-                  <span className="truncate">ZK-Hash: 8fbc73...19a4e2</span>
+                  <span className="truncate">No lab file yet • SHA-256 appears after a real upload</span>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <button
@@ -534,7 +533,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 <Database className="w-6 h-6 text-[#006194]" />
               </div>
               <h3 className="font-['Inter'] text-xl text-[#0b1c30] font-bold">
-                Selective Sovereign Sharing
+                Opt-in public sharing
               </h3>
               <p className="font-['Inter'] text-sm text-[#3f4850] leading-relaxed">
                 Opt-in to contribute anonymized cohorts to public Parquet/CSV research repositories

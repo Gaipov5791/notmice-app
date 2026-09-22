@@ -211,8 +211,9 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
             Biomarker & PhenoAge History
           </h1>
           <p className="font-['Inter'] text-sm text-[#3f4850] mt-1 max-w-2xl">
-            Track biological deceleration across repeated laboratory test dates. Observe how lifestyle,
-            dietary, or pharmacological longevity protocols alter your trajectory.
+            {history.length === 0
+              ? 'Tutorial start: no laboratory history is loaded. The numbers on the landing page are a worked example, not a patient record. A panel appears here only after you save one from this session.'
+              : 'Saved panels from this browser session. This list is not loaded from the laboratory dataset.'}
           </p>
         </div>
 
@@ -286,12 +287,16 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
             <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]">LATEST PHENOAGE</span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="font-['Inter'] text-2xl font-bold text-[#006947]">
-                {trajectoryStats.latestPheno.toFixed(1)}
+                {history.length === 0 ? '—' : trajectoryStats.latestPheno.toFixed(1)}
               </span>
               <span className="text-[11px] text-[#565e74]">yrs</span>
             </div>
-            <span className="font-['JetBrains_Mono'] text-[10px] text-[#006947] font-semibold mt-1">
-              {trajectoryStats.totalDelta <= 0 ? 'Decelerated Profile' : 'Accelerated'}
+            <span className="font-['JetBrains_Mono'] text-[10px] text-[#565e74] font-semibold mt-1">
+              {history.length === 0
+                ? 'No panels yet'
+                : trajectoryStats.totalDelta <= 0
+                  ? 'Decelerated Profile'
+                  : 'Accelerated'}
             </span>
           </div>
 
@@ -299,12 +304,16 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
             <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]">PACE OF AGING</span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="font-['Inter'] text-2xl font-bold text-[#006194]">
-                {trajectoryStats.agingPace}
+                {history.length === 0 ? '—' : trajectoryStats.agingPace}
               </span>
               <span className="text-[11px] text-[#565e74]">bio-yr / cal-yr</span>
             </div>
-            <span className="font-['JetBrains_Mono'] text-[10px] text-[#006947] font-semibold mt-1">
-              {trajectoryStats.agingPace < 1.0 ? 'Slowed aging rate (<1.0)' : 'Baseline pace'}
+            <span className="font-['JetBrains_Mono'] text-[10px] text-[#565e74] font-semibold mt-1">
+              {history.length === 0
+                ? 'No panels yet'
+                : trajectoryStats.agingPace < 1.0
+                  ? 'Slowed aging rate (<1.0)'
+                  : 'Baseline pace'}
             </span>
           </div>
 
@@ -312,12 +321,16 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
             <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]">AVG PHENO ADVANTAGE</span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="font-['Inter'] text-2xl font-bold text-[#006947]">
-                {Math.abs(trajectoryStats.avgDelta).toFixed(1)}
+                {history.length === 0 ? '—' : Math.abs(trajectoryStats.avgDelta).toFixed(1)}
               </span>
-              <span className="text-[11px] text-[#565e74]">years younger</span>
+              <span className="text-[11px] text-[#565e74]">
+                {history.length === 0 ? 'years' : 'years younger'}
+              </span>
             </div>
             <span className="font-['JetBrains_Mono'] text-[10px] text-[#565e74] mt-1">
-              Across {history.length} laboratory test points
+              {history.length === 0
+                ? 'No panels yet'
+                : `Across ${history.length} laboratory test points`}
             </span>
           </div>
 
@@ -329,14 +342,16 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
                   trajectoryStats.netBioChange <= 0 ? 'text-[#006947]' : 'text-[#ba1a1a]'
                 }`}
               >
-                {trajectoryStats.netBioChange > 0
-                  ? `+${trajectoryStats.netBioChange}`
-                  : trajectoryStats.netBioChange}
+                {history.length === 0
+                  ? '—'
+                  : trajectoryStats.netBioChange > 0
+                    ? `+${trajectoryStats.netBioChange}`
+                    : trajectoryStats.netBioChange}
               </span>
               <span className="text-[11px] text-[#565e74]">yrs net</span>
             </div>
             <span className="font-['JetBrains_Mono'] text-[10px] text-[#565e74] mt-1">
-              From baseline to latest panel
+              {history.length === 0 ? 'No panels yet' : 'From baseline to latest panel'}
             </span>
           </div>
         </div>
