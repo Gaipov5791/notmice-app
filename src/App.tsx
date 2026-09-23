@@ -207,7 +207,7 @@ export default function App() {
     setAuthError(null);
     try {
       const created = await createAccount();
-      storeToken(created.accessToken);
+      clearStoredToken();
       setAccount({
         publicId: created.publicId,
         isPublic: created.isPublic,
@@ -403,7 +403,10 @@ export default function App() {
       {/* Seed Phrase Vault Modal */}
       <SeedPhraseModal
         isOpen={isSeedPhraseModalOpen}
-        onClose={() => setIsSeedPhraseModalOpen(false)}
+        onClose={() => {
+          if (revealedMnemonic && revealedMnemonic.length === 12) return;
+          setIsSeedPhraseModalOpen(false);
+        }}
         publicId={account?.publicId ?? null}
         revealedMnemonic={revealedMnemonic}
         isAuthenticated={account !== null}
@@ -418,16 +421,23 @@ export default function App() {
         onLogout={() => {
           void handleLogout();
         }}
-        onConfirmPhraseSaved={() => setRevealedMnemonic(null)}
+        onConfirmPhraseSaved={() => {
+          if (account?.accessToken) {
+            storeToken(account.accessToken);
+          }
+          setRevealedMnemonic(null);
+          setIsSeedPhraseModalOpen(false);
+        }}
       />
 
-      {/* Session log */}
-      <TerminalModal
-        isOpen={isTerminalModalOpen}
-        onClose={() => setIsTerminalModalOpen(false)}
-        accountAddress={publicIdLabel}
-        phenoAge={phenoAgeCalculation.phenoAge}
-      />
+      {import.meta.env.DEV && (
+        <TerminalModal
+          isOpen={isTerminalModalOpen}
+          onClose={() => setIsTerminalModalOpen(false)}
+          accountAddress={publicIdLabel}
+          phenoAge={phenoAgeCalculation.phenoAge}
+        />
+      )}
     </div>
   );
 }

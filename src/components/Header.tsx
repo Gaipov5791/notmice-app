@@ -214,15 +214,16 @@ export const Header: React.FC<HeaderProps> = ({
             <KeyRound className="w-4 h-4 text-[#006194]" />
           </button>
 
-          {/* Terminal button */}
-          <button
-            onClick={onOpenTerminal}
-            aria-label="Session log"
-            title="Session log"
-            className="flex items-center gap-1 text-[#3f4850] hover:text-[#0b1c30] bg-[#eff4ff] hover:bg-[#e5eeff] p-2 rounded transition-colors border border-[#dce9ff] cursor-pointer"
-          >
-            <Terminal className="w-4 h-4 text-[#3f4850]" />
-          </button>
+          {import.meta.env.DEV && (
+            <button
+              onClick={onOpenTerminal}
+              aria-label="Session log"
+              title="Session log"
+              className="flex items-center gap-1 text-[#3f4850] hover:text-[#0b1c30] bg-[#eff4ff] hover:bg-[#e5eeff] p-2 rounded transition-colors border border-[#dce9ff] cursor-pointer"
+            >
+              <Terminal className="w-4 h-4 text-[#3f4850]" />
+            </button>
+          )}
 
           {/* Mobile hamburger */}
           <button

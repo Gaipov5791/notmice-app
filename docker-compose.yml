@@ -59,11 +59,14 @@ services:
     restart: unless-stopped
 
   proxy:
-    image: nginx:1.27-alpine
+    build:
+      context: ./proxy
+      dockerfile: Dockerfile
+    environment:
+      DOCS_BASIC_AUTH_USER: ${DOCS_BASIC_AUTH_USER:-docs}
+      DOCS_BASIC_AUTH_PASSWORD: ${DOCS_BASIC_AUTH_PASSWORD:-dev-docs-change-me}
     ports:
       - "8080:80"
-    volumes:
-      - ./proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       api:
         condition: service_healthy

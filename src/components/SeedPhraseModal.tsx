@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, KeyRound, Copy, Check, LogOut, ShieldAlert, LoaderCircle } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { X, KeyRound, Copy, Check, Download, LogOut, ShieldAlert, LoaderCircle } from 'lucide-react';
 
 interface SeedPhraseModalProps {
   isOpen: boolean;
@@ -29,22 +29,56 @@ export const SeedPhraseModal: React.FC<SeedPhraseModalProps> = ({
   onConfirmPhraseSaved,
 }) => {
   const [copied, setCopied] = useState(false);
+  const [phraseCaptured, setPhraseCaptured] = useState(false);
   const [savedChecked, setSavedChecked] = useState(false);
   const [restorePhrase, setRestorePhrase] = useState('');
+
+  useEffect(() => {
+    setPhraseCaptured(false);
+    setSavedChecked(false);
+    setCopied(false);
+  }, [revealedMnemonic]);
+
+  const showingReveal = Boolean(revealedMnemonic && revealedMnemonic.length === 12);
+  const canContinue = savedChecked && phraseCaptured;
+
+  const requestClose = () => {
+    if (showingReveal) return;
+    onClose();
+  };
 
   if (!isOpen) return null;
 
   const handleCopy = () => {
     if (!revealedMnemonic) return;
-    navigator.clipboard.writeText(revealedMnemonic.join(' '));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    void navigator.clipboard.writeText(revealedMnemonic.join(' ')).then(() => {
+      setCopied(true);
+      setPhraseCaptured(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const handleDownload = () => {
+    if (!revealedMnemonic) return;
+    const blob = new Blob([`${revealedMnemonic.join(' ')}\n`], {
+      type: 'text/plain;charset=utf-8',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'notmice-recovery-phrase.txt';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setPhraseCaptured(true);
   };
 
   const handleLogout = () => {
     setRestorePhrase('');
     setSavedChecked(false);
     setCopied(false);
+    setPhraseCaptured(false);
     onLogout();
   };
 
@@ -52,11 +86,15 @@ export const SeedPhraseModal: React.FC<SeedPhraseModalProps> = ({
     onLogin(restorePhrase);
   };
 
-  const showingReveal = Boolean(revealedMnemonic && revealedMnemonic.length === 12);
   const showingSignedIn = isAuthenticated && !showingReveal;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0b1c30]/50 backdrop-blur-xs animate-in fade-in">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0b1c30]/50 backdrop-blur-xs animate-in fade-in"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) requestClose();
+      }}
+    >
       <div className="bg-[#ffffff] rounded-xl border border-[#cbd5e1] shadow-2xl max-w-xl w-full overflow-hidden flex flex-col">
         <div className="px-6 py-4 border-b border-[#e2e8f0] flex items-center justify-between bg-[#eff4ff]">
           <div className="flex items-center gap-2.5">
@@ -73,8 +111,11 @@ export const SeedPhraseModal: React.FC<SeedPhraseModalProps> = ({
             </div>
           </div>
           <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-[#565e74] hover:bg-[#e2e8f0] hover:text-[#0b1c30] transition-colors cursor-pointer"
+            onClick={requestClose}
+            disabled={showingReveal}
+            aria-label={showingReveal ? 'Save the recovery phrase before closing' : 'Close'}
+            title={showingReveal ? 'Save the recovery phrase before closing' : undefined}
+            className="p-1.5 rounded-lg text-[#565e74] hover:bg-[#e2e8f0] hover:text-[#0b1c30] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <X className="w-5 h-5" />
           </button>
@@ -93,8 +134,8 @@ export const SeedPhraseModal: React.FC<SeedPhraseModalProps> = ({
                 <ShieldAlert className="w-5 h-5 text-[#006194] shrink-0 mt-0.5" />
                 <div>
                   <span className="font-semibold text-[#0b1c30] block">Shown once</span>
-                  Write these 12 BIP-39 words down now. The server stores only an argon2id hash, not
-                  the phrase. It will not be returned on later visits.
+                  Download the file or copy the 12 BIP-39 words, then confirm you stored them. The
+                  server keeps only an argon2id hash. The phrase is not returned on later visits.
                 </div>
               </div>
 
@@ -115,7 +156,14 @@ export const SeedPhraseModal: React.FC<SeedPhraseModalProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-1">
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  onClick={handleDownload}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold bg-[#006194] text-[#ffffff] hover:bg-[#007bb9] transition-colors cursor-pointer"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Download phrase</span>
+                </button>
                 <button
                   onClick={handleCopy}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold bg-[#eff4ff] hover:bg-[#e5eeff] text-[#006194] border border-[#dce9ff] transition-colors cursor-pointer"
@@ -128,6 +176,11 @@ export const SeedPhraseModal: React.FC<SeedPhraseModalProps> = ({
                   <span>{copied ? 'Copied Phrase' : 'Copy 12 Words'}</span>
                 </button>
               </div>
+              {!phraseCaptured && (
+                <p className="font-['Inter'] text-xs text-[#565e74]">
+                  Download or copy the phrase before continuing.
+                </p>
+              )}
 
               <label className="flex items-start gap-2.5 text-xs text-[#3f4850] cursor-pointer">
                 <input
@@ -202,7 +255,7 @@ export const SeedPhraseModal: React.FC<SeedPhraseModalProps> = ({
         </div>
 
         <div className="px-6 py-3.5 border-t border-[#e2e8f0] bg-[#f8f9ff] flex justify-between">
-          {isAuthenticated ? (
+          {isAuthenticated && !showingReveal ? (
             <button
               onClick={handleLogout}
               disabled={isBusy}
@@ -217,13 +270,13 @@ export const SeedPhraseModal: React.FC<SeedPhraseModalProps> = ({
           {showingReveal ? (
             <button
               onClick={() => {
-                if (!savedChecked) return;
+                if (!canContinue) return;
                 setSavedChecked(false);
                 setCopied(false);
+                setPhraseCaptured(false);
                 onConfirmPhraseSaved();
-                onClose();
               }}
-              disabled={!savedChecked}
+              disabled={!canContinue}
               className="px-4 py-1.5 rounded font-['Inter'] text-sm font-semibold bg-[#006194] text-[#ffffff] hover:bg-[#007bb9] disabled:opacity-50 transition-colors cursor-pointer"
             >
               Continue
