@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { TabType, LabPanelData } from '../../types';
 import { INITIAL_BIOMARKERS, PHENOAGE_BIOMARKERS, PRESET_LAB_PANELS } from '../../data/phenoAgeData';
 import { extractLabFile } from '../../api/uploads';
+import { fill } from '../../i18n/fill';
+import { getActiveI18n } from '../../i18n/catalog';
+import { useI18n } from '../../i18n/I18nProvider';
 import {
   UploadCloud,
   Lock,
@@ -30,6 +33,8 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
   isAuthenticated,
   onRequestAuth,
 }) => {
+  const { m } = useI18n();
+  const copy = m.upload;
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progressStep, setProgressStep] = useState(0);
@@ -45,7 +50,7 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
     setIsProcessing(true);
     setSelectedFileName(fileName);
     setProgressStep(5);
-    setProgressMsg('Loading local demo fixture (not parsed from a document).');
+    setProgressMsg(getActiveI18n().messages.upload.loadingDemo);
 
     const preset = PRESET_LAB_PANELS[presetKey];
     const newPanel: LabPanelData = {
@@ -76,13 +81,13 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
     setIsProcessing(true);
     setSelectedFileName(file.name);
     setProgressStep(1);
-    setProgressMsg('Uploading to server RAM. Original will not be written to disk...');
+    setProgressMsg(getActiveI18n().messages.upload.uploading);
     try {
       setProgressStep(2);
-      setProgressMsg('Computing SHA-256 and extracting markers...');
+      setProgressMsg(getActiveI18n().messages.upload.hashing);
       const extracted = await extractLabFile(accessToken, file);
       setProgressStep(5);
-      setProgressMsg('Extraction ready for human review.');
+      setProgressMsg(getActiveI18n().messages.upload.ready);
 
       const biomarkers: Record<string, number> = { ...INITIAL_BIOMARKERS };
       const confidenceScores: Record<string, number> = {};
@@ -98,7 +103,7 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
 
       const newPanel: LabPanelData = {
         id: `panel-${Date.now()}`,
-        labName: extracted.labName ?? 'Unknown laboratory',
+        labName: extracted.labName ?? getActiveI18n().messages.shell.unknownLaboratory,
         testDate: extracted.collectedAt ?? new Date().toISOString().slice(0, 10),
         sourceType: 'pdf',
         fileName: file.name,
@@ -115,7 +120,7 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
       onLoadPanel(newPanel);
       setActiveTab('review-extraction');
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : 'Extraction failed');
+      setUploadError(err instanceof Error ? err.message : getActiveI18n().messages.shell.extractionFailed);
     } finally {
       setIsProcessing(false);
     }
@@ -152,18 +157,17 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="bg-[#cce5ff] text-[#004b73] font-['JetBrains_Mono'] text-xs font-semibold px-2 py-0.5 rounded">
-              Pipeline Stage 01
+              {copy.stage}
             </span>
             <span className="font-['JetBrains_Mono'] text-xs text-[#565e74]">
-              Server RAM ingest · SHA-256 provenance
+              {copy.stageMeta}
             </span>
           </div>
           <h1 className="font-['Inter'] text-2xl lg:text-3xl font-bold text-[#0b1c30]">
-            Upload Laboratory Blood Panel
+            {copy.title}
           </h1>
           <p className="font-['Inter'] text-sm text-[#3f4850] mt-1 max-w-2xl">
-            Drop a Quest, LabCorp, NHS, or clinic PDF or scan. The server hashes it in RAM, extracts
-            markers, and discards the original. Confirmed values are stored only after you sign off.
+            {copy.lead}
           </p>
         </div>
 
@@ -174,10 +178,10 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
           </div>
           <div className="flex flex-col">
             <span className="font-['JetBrains_Mono'] text-xs font-bold text-[#0b1c30]">
-              Original not stored
+              {copy.originalNotStored}
             </span>
             <span className="font-['JetBrains_Mono'] text-[11px] text-[#006947]">
-              {accountAddress === 'Guest' ? 'Sign in to extract' : `Session ${accountAddress}`}
+              {!isAuthenticated ? copy.signInToExtract : fill(copy.session, { id: accountAddress })}
             </span>
           </div>
         </div>
@@ -204,17 +208,16 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
 
             <div className="flex flex-col gap-1 max-w-md">
               <span className="font-['Inter'] text-base font-bold text-[#0b1c30]">
-                Drag and drop your PDF lab report here
+                {copy.dropTitle}
               </span>
               <span className="font-['Inter'] text-xs text-[#565e74]">
-                Accepts PDF, TIFF, PNG, or scan files from Quest, LabCorp, BioReference, NHS, or
-                private clinics.
+                {copy.dropHint}
               </span>
             </div>
 
             <div className="flex items-center gap-3">
               <label className="bg-[#006194] hover:bg-[#007bb9] text-[#ffffff] px-5 py-2.5 rounded font-['Inter'] text-xs font-semibold transition-colors cursor-pointer shadow-xs">
-                Select Lab PDF File
+                {copy.selectFile}
                 <input
                   type="file"
                   accept=".pdf,.png,.jpg,.jpeg,.tiff"
@@ -223,15 +226,15 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
                   disabled={isProcessing}
                 />
               </label>
-              <span className="text-xs text-[#94a3b8] font-mono">Demo fixtures are separate, on the right</span>
+              <span className="text-xs text-[#94a3b8] font-mono">{copy.demoAside}</span>
             </div>
 
             <div className="pt-4 mt-2 border-t border-[#f1f5f9] w-full flex items-center justify-center gap-6 text-xs text-[#565e74] font-['JetBrains_Mono']">
               <span className="flex items-center gap-1.5">
-                <Cpu className="w-3.5 h-3.5 text-[#006947]" /> pdfplumber + Gemini Vision
+                <Cpu className="w-3.5 h-3.5 text-[#006947]" /> {copy.parser}
               </span>
               <span className="flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#006194]" /> RAM-only original
+                <ShieldCheck className="w-3.5 h-3.5 text-[#006194]" /> {copy.ramOnly}
               </span>
             </div>
           </div>
@@ -248,9 +251,9 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
               <div className="flex items-center justify-between text-xs">
                 <span className="font-['JetBrains_Mono'] text-[#006194] font-bold flex items-center gap-2">
                   <RefreshCw className="w-4 h-4 animate-spin text-[#006194]" />
-                  OCR Parsing: {selectedFileName}
+                  {fill(copy.parsing, { file: selectedFileName ?? '' })}
                 </span>
-                <span className="font-['JetBrains_Mono'] text-[#565e74]">Step {progressStep}/5</span>
+                <span className="font-['JetBrains_Mono'] text-[#565e74]">{fill(copy.step, { current: progressStep })}</span>
               </div>
 
               {/* Progress bar */}
@@ -272,11 +275,9 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
             <FileCheck className="w-5 h-5 text-[#006194] shrink-0 mt-0.5" />
             <div className="leading-relaxed">
               <strong className="text-[#0b1c30] block mb-0.5">
-                Human-in-the-Loop Safeguard:
+                {copy.safeguardTitle}
               </strong>
-              After parsing, you will be presented with a side-by-side verification screen where you
-              can inspect high-confidence extractions, verify units, and sign off on values before
-              any mathematical computation occurs.
+              {copy.safeguardBody}
             </div>
           </div>
         </div>
@@ -287,15 +288,14 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
             <div className="flex items-center justify-between gap-3">
               <span className="font-['Inter'] text-sm font-bold text-[#0b1c30] flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-[#565e74]" />
-                Demo fixtures
+                {copy.demoTitle}
               </span>
               <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74] bg-[#ffffff] border border-[#e2e8f0] px-1.5 py-0.5 rounded">
-                Not a file upload
+                {copy.demoBadge}
               </span>
             </div>
             <p className="font-['Inter'] text-xs text-[#565e74] leading-relaxed">
-              These buttons fill the review screen with sample numbers. They are not read from a
-              PDF, and confirming them does not publish a lab document.
+              {copy.demoLead}
             </p>
 
             {/* Presets List */}
@@ -308,14 +308,14 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-['Inter'] text-xs font-bold text-[#0b1c30] group-hover:text-[#006194]">
-                    Quest sample numbers
+                    {copy.questTitle}
                   </span>
                   <span className="font-['JetBrains_Mono'] text-[10px] bg-[#4edea3]/20 text-[#006947] font-semibold px-1.5 py-0.5 rounded">
-                    Optimal Profile (Age 42)
+                    {copy.questBadge}
                   </span>
                 </div>
                 <div className="text-[11px] text-[#565e74] flex items-center justify-between">
-                  <span>Demo · hs-CRP 0.8 mg/L · Albumin 46.2 g/L</span>
+                  <span>{copy.questMeta}</span>
                   <ArrowRight className="w-3.5 h-3.5 text-[#006194] opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </button>
@@ -328,14 +328,14 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-['Inter'] text-xs font-bold text-[#0b1c30] group-hover:text-[#006194]">
-                    LabCorp sample numbers
+                    {copy.labcorpTitle}
                   </span>
                   <span className="font-['JetBrains_Mono'] text-[10px] bg-[#eff4ff] text-[#006194] font-semibold px-1.5 py-0.5 rounded">
-                    Mild Inflammation (Age 42)
+                    {copy.labcorpBadge}
                   </span>
                 </div>
                 <div className="text-[11px] text-[#565e74] flex items-center justify-between">
-                  <span>Demo · hs-CRP 1.15 mg/L · Albumin 44.8 g/L</span>
+                  <span>{copy.labcorpMeta}</span>
                   <ArrowRight className="w-3.5 h-3.5 text-[#006194] opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </button>
@@ -348,14 +348,14 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-['Inter'] text-xs font-bold text-[#0b1c30] group-hover:text-[#006194]">
-                    NHS sample numbers
+                    {copy.nhsTitle}
                   </span>
                   <span className="font-['JetBrains_Mono'] text-[10px] bg-[#fff1f2] text-[#ba1a1a] font-semibold px-1.5 py-0.5 rounded">
-                    Baseline Entry (Age 41)
+                    {copy.nhsBadge}
                   </span>
                 </div>
                 <div className="text-[11px] text-[#565e74] flex items-center justify-between">
-                  <span>Demo · hs-CRP 1.6 mg/L · Albumin 43.5 g/L</span>
+                  <span>{copy.nhsMeta}</span>
                   <ArrowRight className="w-3.5 h-3.5 text-[#006194] opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </button>
@@ -365,15 +365,15 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
           {/* Supported Format Specifications Card */}
           <div className="bg-[#ffffff] p-5 rounded-xl border border-[#e2e8f0] flex flex-col gap-2.5 text-xs text-[#3f4850]">
             <span className="font-['Inter'] font-bold text-[#0b1c30]">
-              Automated Parsing Dictionary Coverage
+              {copy.coverageTitle}
             </span>
             <div className="grid grid-cols-2 gap-2 text-[11px] text-[#565e74] font-['JetBrains_Mono']">
-              <div>✓ CBC w/ Differential</div>
-              <div>✓ Comprehensive Metabolic (CMP)</div>
-              <div>✓ Cardio hs-CRP Assay</div>
-              <div>✓ Alkaline Phosphatase (ALP)</div>
-              <div>✓ Glucose (Fasting Serum)</div>
-              <div>✓ Red Cell Distribution (RDW)</div>
+              <div>✓ {copy.coverageCbc}</div>
+              <div>✓ {copy.coverageCmp}</div>
+              <div>✓ {copy.coverageCrp}</div>
+              <div>✓ {copy.coverageAlp}</div>
+              <div>✓ {copy.coverageGlucose}</div>
+              <div>✓ {copy.coverageRdw}</div>
             </div>
           </div>
         </div>

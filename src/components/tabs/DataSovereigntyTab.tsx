@@ -18,6 +18,9 @@ import {
   EyeOff,
   FlaskConical,
 } from 'lucide-react';
+import { getActiveI18n } from '../../i18n/catalog';
+import { fill } from '../../i18n/fill';
+import { useI18n } from '../../i18n/I18nProvider';
 
 interface DataSovereigntyTabProps {
   accountAddress: string;
@@ -38,6 +41,8 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
   onOpenSeedPhrase,
   setActiveTab,
 }) => {
+  const { m } = useI18n();
+  const copy = m.sovereignty;
   const [exportKind, setExportKind] = useState<PublicExportKind | null>(null);
   const [exportSuccess, setExportSuccess] = useState<PublicExportKind | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -62,10 +67,11 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
           return;
         }
         setDatasetPage(null);
+        const messages = getActiveI18n().messages.sovereignty;
         setDatasetError(
           err instanceof DatasetRequestError
-            ? `Public dataset request failed (${err.status}).`
-            : 'Public dataset API did not respond.',
+            ? fill(messages.datasetFailed, { status: err.status })
+            : messages.datasetSilent,
         );
         setDatasetLoading(false);
       });
@@ -73,19 +79,19 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
   }, [datasetReload, isPublic]);
 
   useEffect(() => {
-    if (!isPublic || accountAddress === 'Guest') {
+    if (!isPublic || !isAuthenticated) {
       setSeries(null);
       setSeriesNote(null);
       return;
     }
     const controller = new AbortController();
-    setSeriesNote('Loading this profile from the public API…');
+    setSeriesNote(getActiveI18n().messages.sovereignty.loadingProfile);
     void fetchPublicTimeseries(accountAddress, controller.signal)
       .then((payload) => {
         setSeries(payload);
         setSeriesNote(
           payload.points.length === 0
-            ? 'No confirmed biomarker rows are public for this profile yet.'
+            ? getActiveI18n().messages.sovereignty.noPublicRows
             : null,
         );
       })
@@ -94,14 +100,15 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
           return;
         }
         setSeries(null);
+        const messages = getActiveI18n().messages.sovereignty;
         setSeriesNote(
           err instanceof DatasetRequestError && err.status === 404
-            ? 'This profile is not in the public dataset.'
-            : 'Could not load this profile from the public API.',
+            ? messages.profileMissing
+            : messages.profileFailed,
         );
       });
     return () => controller.abort();
-  }, [accountAddress, isPublic, datasetReload]);
+  }, [accountAddress, isAuthenticated, isPublic, datasetReload]);
 
   const downloadExport = (kind: PublicExportKind) => {
     setExportError(null);
@@ -117,10 +124,11 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
       .catch((err: unknown) => {
         setExportKind(null);
         setExportSuccess(null);
+        const messages = getActiveI18n().messages.sovereignty;
         setExportError(
           err instanceof DatasetRequestError
-            ? `Export failed (${err.status}).`
-            : 'The public dataset export did not respond.',
+            ? fill(messages.exportFailed, { status: err.status })
+            : messages.exportSilent,
         );
       });
   };
@@ -132,18 +140,17 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="bg-[#cce5ff] text-[#004b73] font-['JetBrains_Mono'] text-xs font-semibold px-2 py-0.5 rounded">
-              Research charter
+              {copy.stage}
             </span>
             <span className="font-['JetBrains_Mono'] text-xs text-[#565e74]">
-              Data Sovereignty & Open Science
+              {copy.stageMeta}
             </span>
           </div>
           <h1 className="font-['Inter'] text-2xl lg:text-3xl font-bold text-[#0b1c30]">
-            Data Sovereignty & Public Sharing
+            {copy.title}
           </h1>
           <p className="font-['Inter'] text-sm text-[#3f4850] mt-1 max-w-2xl">
-            Confirmed biomarker rows stay on a pseudonymous id. Original lab files are not stored.
-            Turn sharing on to include those rows in the public CC0 dataset.
+            {copy.lead}
           </p>
         </div>
 
@@ -153,7 +160,7 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
             className="flex items-center gap-2 px-4 py-2.5 rounded font-['Inter'] text-xs font-bold bg-[#fff1f2] hover:bg-[#ffe4e6] text-[#ba1a1a] border border-[#fecdd3] transition-colors cursor-pointer"
           >
             <Trash2 className="w-4 h-4" />
-            <span>Purge Memory State</span>
+            <span>{copy.purge}</span>
           </button>
         </div>
       </div>
@@ -166,7 +173,7 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
             <div className="flex items-center justify-between">
               <span className="font-['Inter'] text-base font-bold text-[#0b1c30] flex items-center gap-2">
                 <Download className="w-5 h-5 text-[#006194]" />
-                Public dataset export
+                {copy.exportTitle}
               </span>
               <span className="font-['JetBrains_Mono'] text-xs bg-[#eff4ff] text-[#006194] px-2 py-0.5 rounded font-semibold">
                 CC0-1.0
@@ -174,8 +181,7 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
             </div>
 
             <p className="font-['Inter'] text-xs text-[#565e74] leading-relaxed">
-              CSV, Parquet, and the datasheet are built on the server from opted-in rows in Postgres.
-              Names, dates of birth, and internal ids are not in these files.
+              {copy.exportLead}
             </p>
 
             {exportError && (
@@ -198,10 +204,10 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
                   <Download className="w-4 h-4 text-[#006947]" />
                 </div>
                 <span className="text-[11px] text-[#565e74]">
-                  One row per confirmed analyte.
+                  {copy.csvHint}
                 </span>
                 <span className="text-[10px] text-[#006947] font-semibold mt-2">
-                  {exportSuccess === 'csv' ? 'Downloaded!' : 'Download .csv'}
+                  {exportSuccess === 'csv' ? copy.downloaded : copy.csvAction}
                 </span>
               </button>
 
@@ -218,10 +224,10 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
                   <Download className="w-4 h-4 text-[#006947]" />
                 </div>
                 <span className="text-[11px] text-[#565e74]">
-                  Columnar file for R and Python.
+                  {copy.parquetHint}
                 </span>
                 <span className="text-[10px] text-[#006947] font-semibold mt-2">
-                  {exportSuccess === 'parquet' ? 'Downloaded!' : 'Download .parquet'}
+                  {exportSuccess === 'parquet' ? copy.downloaded : copy.parquetAction}
                 </span>
               </button>
 
@@ -233,15 +239,15 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
               >
                 <div className="flex items-center justify-between">
                   <span className="font-['Inter'] text-xs font-bold text-[#0b1c30] group-hover:text-[#006194]">
-                    Datasheet
+                    {copy.datasheet}
                   </span>
                   <FileCode className="w-4 h-4 text-[#006194]" />
                 </div>
                 <span className="text-[11px] text-[#565e74]">
-                  Composition, license, and limits.
+                  {copy.datasheetHint}
                 </span>
                 <span className="text-[10px] text-[#006947] font-semibold mt-2">
-                  {exportSuccess === 'datasheet' ? 'Downloaded!' : 'Download .md'}
+                  {exportSuccess === 'datasheet' ? copy.downloaded : copy.datasheetAction}
                 </span>
               </button>
             </div>
@@ -252,23 +258,22 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
             <div className="flex items-center justify-between">
               <span className="font-['Inter'] text-sm font-bold text-[#0b1c30] flex items-center gap-2">
                 <Lock className="w-4 h-4 text-[#006194]" />
-                BIP-39 Vault Mnemonic
+                {copy.vaultTitle}
               </span>
               <button
                 onClick={onOpenSeedPhrase}
                 className="text-xs text-[#006194] hover:underline font-semibold cursor-pointer"
               >
-                Open account
+                {copy.openAccount}
               </button>
             </div>
             <p className="text-xs text-[#565e74] leading-relaxed">
-              Sign in with your 12-word BIP-39 recovery phrase. The server stores only an argon2id
-              hash of the phrase, never email, phone, or the words themselves.
+              {copy.vaultBody}
             </p>
             <div className="flex items-center justify-between p-2.5 bg-[#f8f9ff] rounded border border-[#e2e8f0] font-['JetBrains_Mono'] text-xs text-[#565e74]">
-              <span>Active ID: {accountAddress}</span>
+              <span>{fill(copy.activeId, { id: accountAddress })}</span>
               <span className="text-[#006947] font-semibold">
-                {isAuthenticated ? 'Authenticated' : 'Guest'}
+                {isAuthenticated ? copy.authenticated : copy.guest}
               </span>
             </div>
           </div>
@@ -281,33 +286,30 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
             <div className="flex items-center justify-between">
               <span className="font-['Inter'] text-base font-bold text-[#0b1c30] flex items-center gap-2">
                 <Share2 className="w-5 h-5 text-[#006947]" />
-                Opt-in Anonymized Cohort Sharing
+                {copy.optInTitle}
               </span>
               <span className="font-['JetBrains_Mono'] text-xs bg-[#4edea3]/20 text-[#006947] px-2 py-0.5 rounded font-bold">
-                Open Access
+                {copy.openAccess}
               </span>
             </div>
 
             <p className="font-['Inter'] text-xs text-[#565e74] leading-relaxed">
-              Pharmaceutical anti-aging trials overwhelmingly test on inbred rodent strains, resulting
-              in a 92% failure rate when transitioning to human biology. By voluntarily submitting
-              anonymized longitudinal blood vectors, you help establish an open-access human longevity
-              benchmark.
+              {copy.optInBody}
             </p>
 
             {/* Privacy Redaction Preview */}
             <div className="bg-[#f8f9ff] p-3.5 rounded-lg border border-[#e2e8f0] space-y-2 text-xs">
               <span className="font-['Inter'] font-bold text-[#0b1c30] flex items-center gap-1.5">
                 <EyeOff className="w-4 h-4 text-[#ba1a1a]" />
-                PII Redaction Pipeline (100% Stripped)
+                {copy.redaction}
               </span>
               <div className="grid grid-cols-2 gap-2 text-[11px] font-['JetBrains_Mono'] text-[#565e74]">
-                <div>✗ Full Name (Stripped)</div>
-                <div>✓ Chrono Age (Preserved)</div>
-                <div>✗ Date of Birth (Stripped)</div>
-                <div>✓ 9 LOINC Markers (Preserved)</div>
-                <div>✗ Lab Account Number (Stripped)</div>
-                <div>✓ PhenoAge Delta (Preserved)</div>
+                <div>✗ {copy.strippedName}</div>
+                <div>✓ {copy.keptAge}</div>
+                <div>✗ {copy.strippedDob}</div>
+                <div>✓ {copy.keptMarkers}</div>
+                <div>✗ {copy.strippedAccount}</div>
+                <div>✓ {copy.keptDelta}</div>
               </div>
             </div>
 
@@ -315,12 +317,10 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
             <div className="flex items-center justify-between p-3 bg-[#eff4ff] rounded-lg border border-[#dce9ff]">
               <div className="flex flex-col">
                 <span className="font-['Inter'] text-xs font-bold text-[#0b1c30]">
-                  Contribute Vector to Open Registry
+                  {copy.contribute}
                 </span>
                 <span className="text-[11px] text-[#565e74]">
-                  {isAuthenticated
-                    ? 'Write confirmed biomarker rows to the public dataset when you opt in'
-                    : 'Sign in first, then opt in to the public dataset'}
+                  {isAuthenticated ? copy.contributeOn : copy.contributeOff}
                 </span>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -338,17 +338,19 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
             {isPublic && (
               <div className="p-3 bg-[#f8f9ff] rounded border border-[#dce9ff] flex flex-col gap-1.5 text-xs animate-in fade-in">
                 <span className="font-['JetBrains_Mono'] text-[#006947] font-semibold">
-                  Public sharing is on
+                  {copy.sharingOn}
                 </span>
                 <p className="text-[11px] text-[#565e74] leading-relaxed">
-                  Confirmed biomarker rows for this account are included in the read-only public
-                  dataset. Original lab files are never stored.
+                  {copy.sharingBody}
                 </p>
                 {seriesNote && <p className="text-[11px] text-[#0b1c30]">{seriesNote}</p>}
                 {series && series.points.length > 0 && (
                   <p className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]">
-                    {series.points.length} collection {series.points.length === 1 ? 'date' : 'dates'}{' '}
-                    on {series.publicId}
+                    {fill(copy.collectionDates, {
+                      count: series.points.length,
+                      unit: series.points.length === 1 ? copy.dateOne : copy.dateMany,
+                      id: series.publicId,
+                    })}
                   </p>
                 )}
               </div>
@@ -359,13 +361,10 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
           <div className="bg-[#007bb9] text-[#ffffff] p-6 rounded-xl flex flex-col gap-2.5 shadow-sm">
             <span className="font-['Inter'] text-sm font-bold flex items-center gap-2">
               <FlaskConical className="w-4 h-4 text-white" />
-              The NotMice Scientific Manifesto
+              {copy.manifestoTitle}
             </span>
             <p className="font-['Inter'] text-xs opacity-90 leading-relaxed">
-              "We reject the reliance on short-lived murine longevity experiments as the primary basis
-              for human healthspan interventions. Human aging is multidimensional, immune-complex, and
-              longitudinal. NotMice lets a person confirm their own blood numbers and follow a
-              research aging index over time."
+              {copy.manifesto}
             </p>
           </div>
         </div>
@@ -374,22 +373,21 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
       <div className="bg-[#ffffff] p-6 rounded-xl border border-[#cbd5e1] shadow-xs flex flex-col gap-4">
         <div className="flex items-center justify-between gap-3">
           <span className="font-['Inter'] text-base font-bold text-[#0b1c30]">
-            Public dataset
+            {copy.datasetTitle}
           </span>
           <button
             type="button"
             onClick={() => setDatasetReload((value) => value + 1)}
             className="font-['Inter'] text-xs font-semibold text-[#006194] hover:underline cursor-pointer"
           >
-            Reload
+            {copy.reload}
           </button>
         </div>
         <p className="font-['Inter'] text-xs text-[#565e74] leading-relaxed">
-          Live read from GET /api/v1/dataset. The CSV, Parquet, and datasheet above are the same
-          opted-in rows. Names, dates of birth, and internal ids are not in this response.
+          {copy.datasetLead}
         </p>
         {datasetLoading && (
-          <p className="text-xs text-[#565e74]">Loading the public dataset…</p>
+          <p className="text-xs text-[#565e74]">{copy.datasetLoading}</p>
         )}
         {datasetError && (
           <p className="text-xs text-[#ba1a1a]" role="alert">
@@ -397,21 +395,24 @@ export const DataSovereigntyTab: React.FC<DataSovereigntyTabProps> = ({
           </p>
         )}
         {datasetPage && !datasetLoading && datasetPage.total === 0 && (
-          <p className="text-xs text-[#565e74]">The public dataset has no confirmed rows yet.</p>
+          <p className="text-xs text-[#565e74]">{copy.datasetEmpty}</p>
         )}
         {datasetPage && !datasetLoading && datasetPage.rows.length > 0 && (
           <div className="overflow-x-auto">
             <p className="font-['JetBrains_Mono'] text-[11px] text-[#565e74] mb-2">
-              Showing {datasetPage.rows.length} of {datasetPage.total}
+              {fill(copy.showing, {
+                shown: datasetPage.rows.length,
+                total: datasetPage.total,
+              })}
             </p>
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="font-['Inter'] text-[#565e74] border-b border-[#e2e8f0]">
-                  <th className="py-2 pr-3 font-semibold">Public id</th>
-                  <th className="py-2 pr-3 font-semibold">Collected</th>
-                  <th className="py-2 pr-3 font-semibold">LOINC</th>
-                  <th className="py-2 pr-3 font-semibold">Marker</th>
-                  <th className="py-2 pr-3 font-semibold">Value</th>
+                  <th className="py-2 pr-3 font-semibold">{copy.colPublicId}</th>
+                  <th className="py-2 pr-3 font-semibold">{copy.colCollected}</th>
+                  <th className="py-2 pr-3 font-semibold">{copy.colLoinc}</th>
+                  <th className="py-2 pr-3 font-semibold">{copy.colMarker}</th>
+                  <th className="py-2 pr-3 font-semibold">{copy.colValue}</th>
                 </tr>
               </thead>
               <tbody>

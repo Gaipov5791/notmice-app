@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { TabType, PhenoAgeCalculation } from '../../types';
 import { PHENOAGE_BIOMARKERS } from '../../data/phenoAgeData';
+import { isBiomarkerId } from '../../i18n/biomarkerIds';
+import { fill } from '../../i18n/fill';
+import { useI18n } from '../../i18n/I18nProvider';
 import { LifestyleLongevityAdvisor } from '../LifestyleLongevityAdvisor';
 import {
   Activity,
@@ -40,6 +43,8 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
   setActiveTab,
   onOpenProofModal,
 }) => {
+  const { m } = useI18n();
+  const copy = m.phenoage;
   const [savedNotification, setSavedNotification] = useState(false);
 
   const handleSliderChange = (id: string, val: number) => {
@@ -78,19 +83,17 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="bg-[#cce5ff] text-[#004b73] font-['JetBrains_Mono'] text-xs font-semibold px-2 py-0.5 rounded">
-              Pipeline Stage 04
+              {copy.stage}
             </span>
             <span className="font-['JetBrains_Mono'] text-xs text-[#565e74]">
-              Morgan Levine Gompertz Proportional Hazard Model
+              {copy.stageMeta}
             </span>
           </div>
           <h1 className="font-['Inter'] text-2xl lg:text-3xl font-bold text-[#0b1c30]">
-            PhenoAge™ Engine Scoreboard
+            {copy.title}
           </h1>
           <p className="font-['Inter'] text-sm text-[#3f4850] mt-1 max-w-2xl">
-            Calculated biological age based on NHANES IV multi-system clinical biomarkers. Adjust
-            parameters below to simulate how intervention strategies shift your biological aging
-            trajectory.
+            {copy.lead}
           </p>
           <p className="font-['Inter'] text-xs text-[#3f4850] mt-3 max-w-2xl border-l-2 border-[#006194] pl-3">
             {calculation.disclaimer}
@@ -107,7 +110,7 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
             className="flex items-center gap-1.5 px-3 py-2 rounded text-xs font-semibold text-[#3f4850] hover:bg-[#eff4ff] border border-[#cbd5e1] transition-colors cursor-pointer"
           >
             <RotateCcw className="w-4 h-4" />
-            <span>Reset Baseline</span>
+            <span>{copy.reset}</span>
           </button>
 
           <button
@@ -115,7 +118,7 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
             className="flex items-center gap-2 px-4 py-2 rounded font-['Inter'] text-xs font-bold bg-[#006947] hover:bg-[#00855b] text-[#ffffff] shadow-sm transition-all cursor-pointer"
           >
             <Save className="w-4 h-4" />
-            <span>{savedNotification ? 'Saved to History!' : 'Save to History'}</span>
+            <span>{savedNotification ? copy.saved : copy.save}</span>
           </button>
 
           <button
@@ -123,7 +126,7 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
             className="flex items-center gap-2 px-4 py-2 rounded font-['Inter'] text-xs font-bold bg-[#006194] hover:bg-[#007bb9] text-[#ffffff] shadow-sm transition-all cursor-pointer"
           >
             <ShieldCheck className="w-4 h-4" />
-            <span>Index details</span>
+            <span>{copy.indexDetails}</span>
           </button>
         </div>
       </div>
@@ -134,18 +137,18 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
         <div className="bg-[#ffffff] p-5 rounded-xl border border-[#cbd5e1] shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-center text-[#565e74] text-xs mb-1 font-['JetBrains_Mono']">
-              <span>CHRONOLOGICAL AGE</span>
-              <span>CALENDAR YRS</span>
+              <span>{copy.chronoLabel}</span>
+              <span>{copy.calendarYrs}</span>
             </div>
             <div className="flex items-baseline gap-2 mt-2">
               <span className="font-['Inter'] text-3xl font-bold text-[#0b1c30]">
                 {chronologicalAge.toFixed(1)}
               </span>
-              <span className="text-xs text-[#565e74]">years</span>
+              <span className="text-xs text-[#565e74]">{m.shell.years}</span>
             </div>
           </div>
           <div className="mt-4 pt-3 border-t border-[#f1f5f9] flex items-center justify-between">
-            <span className="text-xs text-[#565e74]">Adjust Age:</span>
+            <span className="text-xs text-[#565e74]">{copy.adjustAge}</span>
             <input
               type="number"
               min="18"
@@ -162,18 +165,18 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
         <div className="bg-[#ffffff] p-5 rounded-xl border border-[#cbd5e1] shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-center text-[#006194] text-xs mb-1 font-['JetBrains_Mono'] font-bold">
-              <span>BIOLOGICAL PHENOAGE</span>
-              <span>LEVINE 2018</span>
+              <span>{copy.bioLabel}</span>
+              <span>{copy.levine}</span>
             </div>
             <div className="flex items-baseline gap-2 mt-2">
               <span className="font-['Inter'] text-4xl font-bold text-[#006194]">
                 {calculation.isValid ? calculation.phenoAge.toFixed(1) : '…'}
               </span>
-              <span className="text-xs text-[#565e74]">years</span>
+              <span className="text-xs text-[#565e74]">{m.shell.years}</span>
             </div>
           </div>
           <div className="mt-4 pt-3 border-t border-[#f1f5f9] flex items-center justify-between">
-            <span className="text-xs text-[#565e74]">Aging Variance (Δ):</span>
+            <span className="text-xs text-[#565e74]">{copy.agingVariance}</span>
             <span
               className={`font-['JetBrains_Mono'] text-xs font-bold px-2 py-0.5 rounded flex items-center gap-1 ${
                 isDecelerated ? 'bg-[#4edea3]/25 text-[#006947]' : 'bg-[#ffdad6] text-[#ba1a1a]'
@@ -185,7 +188,10 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
                 <TrendingUp className="w-3.5 h-3.5" />
               )}
               {calculation.isValid
-                ? `${calculation.ageDelta > 0 ? '+' : ''}${calculation.ageDelta.toFixed(1)} Yrs`
+                ? fill(copy.yearsDelta, {
+                    sign: calculation.ageDelta > 0 ? '+' : '',
+                    value: calculation.ageDelta.toFixed(1),
+                  })
                 : '…'}
             </span>
           </div>
@@ -195,18 +201,18 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
         <div className="bg-[#ffffff] p-5 rounded-xl border border-[#cbd5e1] shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-center text-[#565e74] text-xs mb-1 font-['JetBrains_Mono']">
-              <span>10-YR MORTALITY HAZARD</span>
-              <span>NHANES GOMPERTZ</span>
+              <span>{copy.mortalityLabel}</span>
+              <span>{copy.gompertz}</span>
             </div>
             <div className="flex items-baseline gap-2 mt-2">
               <span className="font-['Inter'] text-3xl font-bold text-[#006947]">
                 {calculation.isValid ? `${calculation.mortalityScore10yr.toFixed(1)}%` : '…'}
               </span>
-              <span className="text-xs text-[#565e74]">cumulative</span>
+              <span className="text-xs text-[#565e74]">{copy.cumulative}</span>
             </div>
           </div>
           <div className="mt-4 pt-3 border-t border-[#f1f5f9] flex items-center justify-between text-xs text-[#565e74]">
-            <span>NHANES Cohort Avg:</span>
+            <span>{copy.cohortAvg}</span>
             <span className="font-['JetBrains_Mono'] font-bold text-[#0b1c30]">4.2%</span>
           </div>
         </div>
@@ -215,21 +221,21 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
         <div className="bg-[#ffffff] p-5 rounded-xl border border-[#cbd5e1] shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-center text-[#565e74] text-xs mb-1 font-['JetBrains_Mono']">
-              <span>POPULATION TIER</span>
-              <span>PERCENTILE</span>
+              <span>{copy.tierLabel}</span>
+              <span>{copy.percentile}</span>
             </div>
             <div className="flex items-baseline gap-2 mt-2">
               <span className="font-['Inter'] text-3xl font-bold text-[#006194]">
                 {calculation.isValid
-                  ? `Top ${Math.max(1, 100 - calculation.percentileRank)}%`
+                  ? fill(copy.topPercent, { value: Math.max(1, 100 - calculation.percentileRank) })
                   : '…'}
               </span>
             </div>
           </div>
           <div className="mt-4 pt-3 border-t border-[#f1f5f9] flex items-center justify-between text-xs text-[#565e74]">
-            <span>Deceleration Status:</span>
+            <span>{copy.decelerationStatus}</span>
             <span className="font-['Inter'] font-semibold text-[#006947]">
-              {isDecelerated ? 'High Protection' : 'Attention Needed'}
+              {isDecelerated ? copy.highProtection : copy.attentionNeeded}
             </span>
           </div>
         </div>
@@ -243,14 +249,14 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <span className="font-['Inter'] text-base font-bold text-[#0b1c30] block">
-                  All 9 PhenoAge Biomarker Sliders
+                  {copy.slidersTitle}
                 </span>
                 <span className="font-['Inter'] text-xs text-[#565e74]">
-                  Slide any biomarker to observe instantaneous Gompertz delta recalculations.
+                  {copy.slidersLead}
                 </span>
               </div>
               <span className="font-['JetBrains_Mono'] text-xs bg-[#eff4ff] text-[#006194] px-2.5 py-1 rounded font-bold">
-                9 Active
+                {copy.active}
               </span>
             </div>
 
@@ -267,7 +273,9 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
                   >
                     <div className="flex justify-between items-center text-xs">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-[#0b1c30]">{bio.name}</span>
+                        <span className="font-bold text-[#0b1c30]">
+                          {isBiomarkerId(bio.id) ? m.biomarkers[bio.id].name : bio.name}
+                        </span>
                         <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]">
                           ({bio.loinc})
                         </span>
@@ -287,7 +295,7 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
                               : 'bg-[#e5eeff] text-[#3f4850]'
                           }`}
                         >
-                          {isOptimal ? 'Optimal' : 'Normal'}
+                          {isOptimal ? copy.optimal : copy.normal}
                         </span>
                       </div>
                     </div>
@@ -304,11 +312,15 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
                     />
 
                     <div className="flex justify-between text-[#565e74] font-['JetBrains_Mono'] text-[10px]">
-                      <span>Min: {bio.clinicalRange[0]}</span>
+                      <span>{fill(copy.min, { value: bio.clinicalRange[0] })}</span>
                       <span className="text-[#006947] font-semibold">
-                        Optimal: {bio.optimalRange[0]} - {bio.optimalRange[1]} {bio.unit}
+                        {fill(copy.optimalRange, {
+                          min: bio.optimalRange[0],
+                          max: bio.optimalRange[1],
+                          unit: bio.unit,
+                        })}
                       </span>
-                      <span>Max: {bio.clinicalRange[1]}</span>
+                      <span>{fill(copy.max, { value: bio.clinicalRange[1] })}</span>
                     </div>
                   </div>
                 );
@@ -323,16 +335,15 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
           <div className="bg-[#ffffff] p-6 rounded-xl border border-[#cbd5e1] shadow-xs flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <span className="font-['Inter'] text-sm font-bold text-[#0b1c30]">
-                Biomarker Aging Delta Contributions
+                {copy.contributions}
               </span>
               <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]">
-                Weight Impact
+                {copy.weightImpact}
               </span>
             </div>
 
             <p className="font-['Inter'] text-xs text-[#565e74]">
-              Negative values (green) protect and decelerate aging; positive values accelerate
-              biological mortality risk.
+              {copy.contributionLead}
             </p>
 
             <div className="space-y-3 pt-2">
@@ -341,15 +352,18 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
                 return (
                   <div key={score.id} className="flex flex-col gap-1 text-xs">
                     <div className="flex justify-between items-center">
-                      <span className="font-semibold text-[#0b1c30]">{score.name}</span>
+                      <span className="font-semibold text-[#0b1c30]">
+                        {isBiomarkerId(score.id) ? m.biomarkers[score.id].name : score.name}
+                      </span>
                       <span
                         className={`font-['JetBrains_Mono'] font-bold ${
                           isProtective ? 'text-[#006947]' : 'text-[#ba1a1a]'
                         }`}
                       >
-                        {score.contribution > 0
-                          ? `+${score.contribution.toFixed(1)} yrs`
-                          : `${score.contribution.toFixed(1)} yrs`}
+                        {fill(copy.yearsSigned, {
+                          sign: score.contribution > 0 ? '+' : '',
+                          value: score.contribution.toFixed(1),
+                        })}
                       </span>
                     </div>
                     {/* Visual Bar */}
@@ -380,17 +394,14 @@ export const PhenoAgeEngineTab: React.FC<PhenoAgeEngineTabProps> = ({
           <div className="bg-[#eff4ff] p-5 rounded-xl border border-[#dce9ff] flex flex-col gap-3">
             <div className="flex items-center gap-2 font-bold text-xs text-[#0b1c30]">
               <Sparkles className="w-4 h-4 text-[#006194]" />
-              <span>Evidence-Based Longevity Levers</span>
+              <span>{copy.leversTitle}</span>
             </div>
             <div className="text-xs text-[#3f4850] space-y-2 leading-relaxed">
               <p>
-                <strong>hs-CRP & RDW Dominance:</strong> Levine's model assigns logarithmic weight
-                to systemic sterile inflammation. Keeping hs-CRP &lt; 0.9 mg/L and RDW &lt; 12.5%
-                accounts for over 60% of biological age deceleration variance.
+                <strong>{copy.leversCrp}</strong>
               </p>
               <p>
-                <strong>Hepatic Reserve:</strong> High serum albumin (&gt;45 g/L) reflects strong
-                synthetic capacity and protein nutrition, providing an active negative hazard multiplier.
+                <strong>{copy.leversAlbumin}</strong>
               </p>
             </div>
           </div>

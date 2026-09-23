@@ -5,6 +5,10 @@ import {
   LIFESTYLE_KNOWLEDGE_BASE,
   LifestyleRecommendation,
 } from '../data/lifestyleInterventions';
+import { isBiomarkerId } from '../i18n/biomarkerIds';
+import { fill } from '../i18n/fill';
+import { useI18n } from '../i18n/I18nProvider';
+import { EVIDENCE_KEYS, isLifestyleId } from '../i18n/lifestyleIds';
 import {
   Sparkles,
   ShieldAlert,
@@ -37,6 +41,8 @@ export const LifestyleLongevityAdvisor: React.FC<LifestyleLongevityAdvisorProps>
   calculation,
   chronologicalAge,
 }) => {
+  const { m } = useI18n();
+  const copy = m.lifestyleUi;
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedPriority, setSelectedPriority] = useState<string>('all');
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
@@ -104,7 +110,7 @@ export const LifestyleLongevityAdvisor: React.FC<LifestyleLongevityAdvisorProps>
         }
 
         statusMap[def.id] = {
-          name: def.name,
+          name: isBiomarkerId(def.id) ? m.biomarkers[def.id].name : def.name,
           val,
           unit: def.unit,
           status,
@@ -147,7 +153,7 @@ export const LifestyleLongevityAdvisor: React.FC<LifestyleLongevityAdvisorProps>
         potentialYearsSaved: Number(totalPotentialYears.toFixed(1)),
         biomarkerStatusMap: statusMap,
       };
-    }, [biomarkers, calculation]);
+    }, [biomarkers, calculation, m.biomarkers]);
 
   // Filter recommendations based on active tabs/filters
   const filteredRecs = useMemo(() => {
@@ -169,12 +175,12 @@ export const LifestyleLongevityAdvisor: React.FC<LifestyleLongevityAdvisorProps>
   const completedCount = Object.values(completedInterventions).filter(Boolean).length;
 
   const categories = [
-    { id: 'all', label: 'All Protocols' },
-    { id: 'nutrition', label: 'Nutrition & Diet' },
-    { id: 'exercise', label: 'Exercise & Movement' },
-    { id: 'supplementation', label: 'Targeted Supplements' },
-    { id: 'sleep_circadian', label: 'Sleep & Circadian' },
-    { id: 'habits', label: 'Cellular & Lifestyle Habits' },
+    { id: 'all', label: copy.categories.all },
+    { id: 'nutrition', label: copy.categories.nutrition },
+    { id: 'exercise', label: copy.categories.exercise },
+    { id: 'supplementation', label: copy.categories.supplementation },
+    { id: 'sleep_circadian', label: copy.categories.sleep_circadian },
+    { id: 'habits', label: copy.categories.habits },
   ];
 
   const getPriorityBadge = (priority: LifestyleRecommendation['priority']) => {
@@ -182,19 +188,19 @@ export const LifestyleLongevityAdvisor: React.FC<LifestyleLongevityAdvisorProps>
       case 'high':
         return (
           <span className="inline-flex items-center gap-1 font-['JetBrains_Mono'] text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-[#ffdad6] text-[#ba1a1a] border border-[#ffb4ab]">
-            <AlertTriangle className="w-3 h-3" /> High Impact
+            <AlertTriangle className="w-3 h-3" /> {copy.priorityHigh}
           </span>
         );
       case 'moderate':
         return (
           <span className="inline-flex items-center gap-1 font-['JetBrains_Mono'] text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-[#fef3c7] text-[#92400e] border border-[#fde68a]">
-            Moderate Leverage
+            {copy.priorityModerate}
           </span>
         );
       case 'maintenance':
         return (
           <span className="inline-flex items-center gap-1 font-['JetBrains_Mono'] text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-[#e6f4ea] text-[#006947] border border-[#ceead6]">
-            <ShieldCheck className="w-3 h-3" /> Optimal Zone
+            <ShieldCheck className="w-3 h-3" /> {copy.priorityMaintenance}
           </span>
         );
     }
@@ -226,16 +232,14 @@ export const LifestyleLongevityAdvisor: React.FC<LifestyleLongevityAdvisorProps>
           <div className="flex items-center gap-2 mb-1">
             <span className="font-['Inter'] text-lg font-bold text-[#0b1c30] flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-[#006194]" />
-              Personalized Longevity & Lifestyle Engine
+              {copy.title}
             </span>
             <span className="font-['JetBrains_Mono'] text-[11px] bg-[#e6f4ea] text-[#006947] border border-[#ceead6] px-2 py-0.5 rounded font-semibold">
-              Evidence-Based (Levine Calibrated)
+              {copy.badge}
             </span>
           </div>
           <p className="font-['Inter'] text-xs text-[#565e74] max-w-3xl leading-relaxed">
-            Actionable interventions synthesized directly from your current 9 PhenoAge blood biomarkers.
-            Each protocol targets specific biochemical aging pathways (NF-κB inflammation, glycation,
-            erythropoietic stability, and hepatic reserve) to decelerate your Gompertz mortality hazard rate.
+            {copy.lead}
           </p>
         </div>
 
@@ -243,11 +247,11 @@ export const LifestyleLongevityAdvisor: React.FC<LifestyleLongevityAdvisorProps>
         <div className="flex items-center gap-3 shrink-0 bg-[#f8f9ff] px-4 py-2.5 rounded-lg border border-[#e2e8f0]">
           <div className="text-right">
             <span className="block font-['JetBrains_Mono'] text-[10px] text-[#565e74]">
-              POTENTIAL DECELERATION
+              {copy.potential}
             </span>
             <span className="font-['Inter'] text-base font-bold text-[#006947] flex items-center justify-end gap-1">
               <TrendingDown className="w-4 h-4 text-[#006947]" />
-              Up to -{potentialYearsSaved} yrs
+              {fill(copy.upTo, { value: potentialYearsSaved })}
             </span>
           </div>
         </div>
@@ -257,7 +261,7 @@ export const LifestyleLongevityAdvisor: React.FC<LifestyleLongevityAdvisorProps>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         <div className="p-4 bg-[#f8f9ff] rounded-lg border border-[#e2e8f0] flex flex-col justify-between">
           <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]">
-            CURRENT PHENOTYPIC GAP
+            {copy.gap}
           </span>
           <div className="flex items-baseline gap-2 mt-1">
             <span
@@ -269,16 +273,18 @@ export const LifestyleLongevityAdvisor: React.FC<LifestyleLongevityAdvisorProps>
                 ? `${calculation.ageDelta > 0 ? '+' : ''}${calculation.ageDelta.toFixed(1)}`
                 : '…'}
             </span>
-            <span className="text-xs text-[#565e74]">yrs biological age</span>
+            <span className="text-xs text-[#565e74]">{copy.yrsBio}</span>
           </div>
           <span className="font-['JetBrains_Mono'] text-[10px] text-[#565e74] mt-1">
-            PhenoAge {calculation.isValid ? calculation.phenoAge.toFixed(1) : '…'} vs Chrono{' '}
-            {chronologicalAge.toFixed(1)}
+            {fill(copy.vsChrono, {
+              pheno: calculation.isValid ? calculation.phenoAge.toFixed(1) : '…',
+              chrono: chronologicalAge.toFixed(1),
+            })}
           </span>
         </div>
 
         <div className="p-4 bg-[#f8f9ff] rounded-lg border border-[#e2e8f0] flex flex-col justify-between">
-          <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]">HIGH-PRIORITY LEVERS</span>
+          <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]">{copy.highLevers}</span>
           <div className="flex items-baseline gap-2 mt-1">
             <span
               className={`font-['Inter'] text-2xl font-bold ${
@@ -287,39 +293,39 @@ export const LifestyleLongevityAdvisor: React.FC<LifestyleLongevityAdvisorProps>
             >
               {highPriorityCount}
             </span>
-            <span className="text-xs text-[#565e74]">urgent pathways</span>
+            <span className="text-xs text-[#565e74]">{copy.urgent}</span>
           </div>
           <span className="font-['JetBrains_Mono'] text-[10px] text-[#565e74] mt-1">
             {highPriorityCount > 0
-              ? 'Address inflammatory or glycation spikes first'
-              : 'All biomarkers in normal/optimal tiers'}
+              ? copy.addressFirst
+              : copy.allOptimal}
           </span>
         </div>
 
         <div className="p-4 bg-[#f8f9ff] rounded-lg border border-[#e2e8f0] flex flex-col justify-between">
           <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]">
-            ACTION PROTOCOLS IDENTIFIED
+            {copy.identified}
           </span>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="font-['Inter'] text-2xl font-bold text-[#006194]">
               {recommendations.length}
             </span>
-            <span className="text-xs text-[#565e74]">clinical recommendations</span>
+            <span className="text-xs text-[#565e74]">{copy.recommendations}</span>
           </div>
           <span className="font-['JetBrains_Mono'] text-[10px] text-[#565e74] mt-1">
-            Grounded in RCT and NHANES cohort literature
+            {copy.grounded}
           </span>
         </div>
 
         <div className="p-4 bg-[#f8f9ff] rounded-lg border border-[#e2e8f0] flex flex-col justify-between">
           <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]">
-            PROTOCOL ADHERENCE
+            {copy.adherence}
           </span>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="font-['Inter'] text-2xl font-bold text-[#006947]">
               {completedCount} / {recommendations.length}
             </span>
-            <span className="text-xs text-[#565e74]">implemented</span>
+            <span className="text-xs text-[#565e74]">{copy.implemented}</span>
           </div>
           <div className="w-full bg-[#e2e8f0] h-1.5 rounded-full overflow-hidden mt-1.5">
             <div
@@ -339,10 +345,10 @@ export const LifestyleLongevityAdvisor: React.FC<LifestyleLongevityAdvisorProps>
         <div className="flex items-center justify-between text-xs">
           <span className="font-bold text-[#0b1c30] flex items-center gap-1.5">
             <HeartPulse className="w-4 h-4 text-[#006194]" />
-            Panel Diagnostics Status at a Glance
+            {copy.glance}
           </span>
           <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]">
-            9 Biomarkers Profiled
+            {copy.profiled}
           </span>
         </div>
         <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-2 pt-1">
@@ -366,7 +372,13 @@ export const LifestyleLongevityAdvisor: React.FC<LifestyleLongevityAdvisorProps>
                 <span className="font-['JetBrains_Mono'] text-xs font-bold truncate">
                   {info.val}
                 </span>
-                <span className="text-[9px] opacity-75 capitalize truncate">{info.status.replace('_', ' ')}</span>
+                <span className="text-[9px] opacity-75 capitalize truncate">
+                  {info.status === 'high_risk'
+                    ? copy.statusHigh
+                    : info.status === 'moderate'
+                      ? copy.statusModerate
+                      : copy.statusOptimal}
+                </span>
               </div>
             );
           })}
@@ -403,10 +415,10 @@ export const LifestyleLongevityAdvisor: React.FC<LifestyleLongevityAdvisorProps>
             onChange={(e) => setSelectedPriority(e.target.value)}
             className="bg-[#ffffff] border border-[#cbd5e1] rounded-lg px-2.5 py-1 text-xs text-[#0b1c30] font-['Inter'] focus:outline-none focus:border-[#006194] cursor-pointer"
           >
-            <option value="all">All Priorities</option>
-            <option value="high">High Impact Only</option>
-            <option value="moderate">Moderate Leverage Only</option>
-            <option value="maintenance">Optimal / Maintenance Only</option>
+            <option value="all">{copy.priorities.all}</option>
+            <option value="high">{copy.priorities.high}</option>
+            <option value="moderate">{copy.priorities.moderate}</option>
+            <option value="maintenance">{copy.priorities.maintenance}</option>
           </select>
         </div>
       </div>
@@ -415,13 +427,21 @@ export const LifestyleLongevityAdvisor: React.FC<LifestyleLongevityAdvisorProps>
       <div className="space-y-3.5">
         {filteredRecs.length === 0 ? (
           <div className="text-center py-10 bg-[#f8f9ff] rounded-xl border border-[#e2e8f0] text-[#565e74] text-xs">
-            No recommendations match your current filter selections.
+            {copy.empty}
           </div>
         ) : (
           filteredRecs.map((rec) => {
             const isExpanded = expandedCardId === rec.id;
             const isCompleted = !!completedInterventions[rec.id];
             const bioInfo = biomarkerStatusMap[rec.biomarkerId];
+            const item = isLifestyleId(rec.id) ? m.lifestyle[rec.id] : undefined;
+            const title = item?.title ?? rec.title;
+            const mechanism = item?.clinicalMechanism ?? rec.clinicalMechanism;
+            const steps = item?.actionProtocol ?? rec.actionProtocol;
+            const goal = item?.targetGoal ?? rec.targetGoal;
+            const note = item?.note ?? rec.contraindicationsOrNotes;
+            const categoryLabel = copy.categories[rec.category];
+            const evidenceLabel = copy.evidenceLabels[EVIDENCE_KEYS[rec.evidenceLevel]];
 
             return (
               <div
@@ -444,7 +464,7 @@ export const LifestyleLongevityAdvisor: React.FC<LifestyleLongevityAdvisorProps>
                     {/* Completion checkbox button */}
                     <button
                       onClick={(e) => toggleComplete(rec.id, e)}
-                      title={isCompleted ? 'Mark protocol as in-progress' : 'Mark protocol as adopted'}
+                      title={isCompleted ? copy.markProgress : copy.markAdopted}
                       className={`w-6 h-6 rounded-md border flex items-center justify-center transition-all shrink-0 mt-0.5 sm:mt-0 cursor-pointer ${
                         isCompleted
                           ? 'bg-[#00855b] border-[#00855b] text-white'
@@ -459,11 +479,14 @@ export const LifestyleLongevityAdvisor: React.FC<LifestyleLongevityAdvisorProps>
                         {getPriorityBadge(rec.priority)}
                         <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#565e74] bg-[#f1f5f9] px-2 py-0.5 rounded capitalize">
                           {getCategoryIcon(rec.category)}
-                          {rec.category.replace('_', ' ')}
+                          {categoryLabel}
                         </span>
                         <span className="font-['JetBrains_Mono'] text-[10px] text-[#565e74]">
-                          Target: {bioInfo?.name ?? rec.biomarkerId.toUpperCase()} ({bioInfo?.val}{' '}
-                          {bioInfo?.unit})
+                          {fill(copy.target, {
+                            name: bioInfo?.name ?? rec.biomarkerId.toUpperCase(),
+                            value: bioInfo?.val ?? '',
+                            unit: bioInfo?.unit ?? '',
+                          })}
                         </span>
                       </div>
                       <h3
@@ -471,7 +494,7 @@ export const LifestyleLongevityAdvisor: React.FC<LifestyleLongevityAdvisorProps>
                           isCompleted ? 'line-through text-[#64748b]' : ''
                         }`}
                       >
-                        {rec.title}
+                        {title}
                       </h3>
                     </div>
                   </div>
@@ -484,7 +507,7 @@ export const LifestyleLongevityAdvisor: React.FC<LifestyleLongevityAdvisorProps>
 
                     <button
                       className="p-1 text-[#565e74] hover:text-[#0b1c30] transition-colors"
-                      aria-label="Toggle details"
+                      aria-label={copy.toggleDetails}
                     >
                       {isExpanded ? (
                         <ChevronUp className="w-5 h-5" />
@@ -501,20 +524,20 @@ export const LifestyleLongevityAdvisor: React.FC<LifestyleLongevityAdvisorProps>
                     {/* Clinical Mechanism */}
                     <div className="p-3.5 bg-[#f8f9ff] rounded-lg border border-[#e2e8f0]">
                       <span className="font-['JetBrains_Mono'] text-[10px] font-bold uppercase text-[#006194] block mb-1">
-                        Biochemical Mechanism in PhenoAge Model
+                        {copy.mechanism}
                       </span>
                       <p className="text-[#3f4850] leading-relaxed font-['Inter']">
-                        {rec.clinicalMechanism}
+                        {mechanism}
                       </p>
                     </div>
 
                     {/* Action Checklist */}
                     <div>
                       <span className="font-['JetBrains_Mono'] text-[11px] font-bold uppercase text-[#0b1c30] block mb-2">
-                        Concrete Action Protocol & Habit Steps:
+                        {copy.steps}
                       </span>
                       <ul className="space-y-2">
-                        {rec.actionProtocol.map((step, idx) => (
+                        {steps.map((step, idx) => (
                           <li key={idx} className="flex items-start gap-2.5 text-[#3f4850] font-['Inter']">
                             <span className="w-5 h-5 rounded-full bg-[#eff4ff] text-[#006194] font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5 border border-[#dce9ff]">
                               {idx + 1}
@@ -529,25 +552,25 @@ export const LifestyleLongevityAdvisor: React.FC<LifestyleLongevityAdvisorProps>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#f1f5f9] text-[11px]">
                       <div>
                         <span className="font-bold text-[#565e74] block font-['JetBrains_Mono']">
-                          OBJECTIVE TARGET:
+                          {copy.objective}
                         </span>
-                        <span className="text-[#006947] font-semibold">{rec.targetGoal}</span>
+                        <span className="text-[#006947] font-semibold">{goal}</span>
                       </div>
                       <div>
                         <span className="font-bold text-[#565e74] block font-['JetBrains_Mono']">
-                          SCIENTIFIC EVIDENCE:
+                          {copy.evidence}
                         </span>
-                        <span className="text-[#3f4850]">{rec.evidenceLevel}</span>
+                        <span className="text-[#3f4850]">{evidenceLabel}</span>
                         <span className="block text-[10px] text-[#64748b] italic mt-0.5">
                           {rec.studyReference}
                         </span>
                       </div>
                     </div>
 
-                    {rec.contraindicationsOrNotes && (
+                    {note && (
                       <div className="p-2.5 bg-[#fef2f2] rounded border border-[#fecaca] text-[11px] text-[#991b1b] flex items-center gap-2">
                         <AlertTriangle className="w-4 h-4 shrink-0" />
-                        <span>{rec.contraindicationsOrNotes}</span>
+                        <span>{note}</span>
                       </div>
                     )}
                   </div>
@@ -562,11 +585,7 @@ export const LifestyleLongevityAdvisor: React.FC<LifestyleLongevityAdvisorProps>
       <div className="p-4 bg-[#eff4ff] rounded-xl border border-[#dce9ff] flex items-start gap-3 text-xs text-[#3f4850]">
         <Lightbulb className="w-5 h-5 text-[#006194] shrink-0 mt-0.5" />
         <div className="leading-relaxed">
-          <strong>Clinical Disclaimer & Protocol Safety:</strong> These recommendations are algorithmically
-          derived from Levine et al.'s NHANES 10-year mortality model and associated clinical longevity RCTs.
-          They are provided for informational and biological optimization tracking purposes and do not substitute
-          for individualized clinical diagnosis or licensed physician oversight. Consult your healthcare practitioner
-          prior to adopting high-dose supplementation or radical nutritional changes.
+          <strong>{copy.disclaimerTitle}</strong> {copy.disclaimer}
         </div>
       </div>
     </div>

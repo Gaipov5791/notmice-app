@@ -15,6 +15,9 @@ import {
   FileText,
   Clock,
 } from 'lucide-react';
+import { isBiomarkerId } from '../i18n/biomarkerIds';
+import { fill } from '../i18n/fill';
+import { useI18n } from '../i18n/I18nProvider';
 
 interface PrintableReportModalProps {
   isOpen: boolean;
@@ -27,6 +30,9 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
   onClose,
   history,
 }) => {
+  const { locale, m } = useI18n();
+  const copy = m.report;
+
   if (!isOpen || history.length === 0) return null;
 
   const sortedHistory = [...history].sort(
@@ -51,7 +57,7 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
     window.print();
   };
 
-  const formattedPrintDate = new Date().toLocaleDateString('en-US', {
+  const formattedPrintDate = new Date().toLocaleDateString(locale === 'de' ? 'de-DE' : 'en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -69,10 +75,10 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
             <FileText className="w-5 h-5 text-[#38bdf8]" />
             <div>
               <h2 className="font-['Inter'] text-sm sm:text-base font-bold">
-                Export Historical Longevity & Trend Report
+                {copy.exportTitle}
               </h2>
               <p className="font-['Inter'] text-xs text-[#94a3b8]">
-                Clean, publication-grade printable laboratory report
+                {copy.exportLead}
               </p>
             </div>
           </div>
@@ -81,26 +87,26 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
             <button
               onClick={handleDownloadPDF}
               className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-[#006194] hover:bg-[#007bb9] text-white text-xs font-semibold font-['Inter'] transition-colors cursor-pointer shadow-sm"
-              title="Download direct PDF file"
+              title={copy.downloadTitle}
             >
               <FileDown className="w-4 h-4" />
-              <span>Download PDF</span>
+              <span>{copy.downloadPdf}</span>
             </button>
 
             <button
               onClick={handlePrint}
               className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-[#1e293b] hover:bg-[#334155] text-white text-xs font-semibold font-['Inter'] transition-colors cursor-pointer border border-[#475569]"
-              title="Open browser print preview"
+              title={copy.printTitle}
             >
               <Printer className="w-4 h-4" />
-              <span className="hidden sm:inline">Print / Save as PDF</span>
-              <span className="sm:hidden">Print</span>
+              <span className="hidden sm:inline">{copy.printSave}</span>
+              <span className="sm:hidden">{copy.print}</span>
             </button>
 
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg text-[#94a3b8] hover:text-white hover:bg-[#1e293b] transition-colors cursor-pointer ml-1"
-              aria-label="Close modal"
+              aria-label={copy.close}
             >
               <X className="w-5 h-5" />
             </button>
@@ -117,29 +123,28 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
             <div>
               <div className="flex items-center gap-2 text-[#006194] font-['JetBrains_Mono'] text-xs font-bold uppercase tracking-wider mb-1">
                 <Activity className="w-4 h-4" />
-                PhenoAge™ Longevity Telemetry
+                {copy.reportKicker}
               </div>
               <h1 className="text-xl sm:text-2xl font-black text-[#0b1c30] tracking-tight">
-                LONGITUDINAL BIOMARKER & PHENOAGE REPORT
+                {copy.reportTitle}
               </h1>
               <p className="text-xs text-[#565e74] mt-1 max-w-xl">
-                Epigenetic phenotyping derived from NHANES 10-year parametric Gompertz hazard modeling
-                (Levine et al., <em>Aging</em> 2018). Multi-panel temporal comparison.
+                {copy.reportLead}
               </p>
             </div>
 
             <div className="sm:text-right font-['JetBrains_Mono'] text-xs text-[#565e74] space-y-1 bg-[#f8f9ff] p-3 rounded-lg border border-[#e2e8f0] shrink-0">
               <div>
-                <span className="font-semibold text-[#0b1c30]">Report Generated:</span>{' '}
+                <span className="font-semibold text-[#0b1c30]">{copy.generated}</span>{' '}
                 {formattedPrintDate}
               </div>
               <div>
-                <span className="font-semibold text-[#0b1c30]">Panels Profiled:</span>{' '}
-                {sortedHistory.length} Test Dates
+                <span className="font-semibold text-[#0b1c30]">{copy.panels}</span>{' '}
+                {fill(copy.testDates, { count: sortedHistory.length })}
               </div>
               <div className="flex items-center sm:justify-end gap-1 text-[#006947] font-semibold text-[11px]">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Research index, Levine 2018</span>
+                <span>{copy.status}</span>
               </div>
             </div>
           </div>
@@ -147,27 +152,27 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
           {/* Executive Longevity KPI Grid */}
           <div>
             <h3 className="font-['JetBrains_Mono'] text-xs font-bold uppercase tracking-wider text-[#565e74] mb-3">
-              Executive Aging Trajectory Overview
+              {copy.summary}
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="p-3.5 bg-[#f8f9ff] rounded-lg border border-[#e2e8f0]">
                 <span className="font-['JetBrains_Mono'] text-[10px] text-[#565e74] uppercase block">
-                  Latest PhenoAge™
+                  {copy.latestPheno}
                 </span>
                 <div className="flex items-baseline gap-1.5 mt-1">
                   <span className="text-2xl font-bold text-[#006947]">
                     {latest.phenoAge.toFixed(1)}
                   </span>
-                  <span className="text-xs text-[#565e74]">yrs</span>
+                  <span className="text-xs text-[#565e74]">{m.shell.yrs}</span>
                 </div>
                 <span className="text-[10px] font-['JetBrains_Mono'] text-[#565e74]">
-                  Chrono Age: {latest.chronologicalAge.toFixed(1)}y
+                  {fill(copy.chronoAge, { value: latest.chronologicalAge.toFixed(1) })}
                 </span>
               </div>
 
               <div className="p-3.5 bg-[#f8f9ff] rounded-lg border border-[#e2e8f0]">
                 <span className="font-['JetBrains_Mono'] text-[10px] text-[#565e74] uppercase block">
-                  Aging Variance (Δ)
+                  {copy.variance}
                 </span>
                 <div className="flex items-baseline gap-1.5 mt-1">
                   <span
@@ -177,38 +182,38 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
                   >
                     {latest.delta > 0 ? `+${latest.delta.toFixed(1)}` : latest.delta.toFixed(1)}
                   </span>
-                  <span className="text-xs text-[#565e74]">yrs</span>
+                  <span className="text-xs text-[#565e74]">{m.shell.yrs}</span>
                 </div>
                 <span className="text-[10px] font-['JetBrains_Mono'] text-[#006947] font-semibold">
-                  {latest.delta <= 0 ? 'Decelerated Profile' : 'Accelerated'}
+                  {latest.delta <= 0 ? copy.decelerated : copy.accelerated}
                 </span>
               </div>
 
               <div className="p-3.5 bg-[#f8f9ff] rounded-lg border border-[#e2e8f0]">
                 <span className="font-['JetBrains_Mono'] text-[10px] text-[#565e74] uppercase block">
-                  Pace of Aging
+                  {copy.pace}
                 </span>
                 <div className="flex items-baseline gap-1.5 mt-1">
                   <span className="text-2xl font-bold text-[#006194]">{agingPace}</span>
-                  <span className="text-xs text-[#565e74]">bio/cal yr</span>
+                  <span className="text-xs text-[#565e74]">{copy.paceUnit}</span>
                 </div>
                 <span className="text-[10px] font-['JetBrains_Mono'] text-[#006947] font-semibold">
-                  {agingPace < 1.0 ? 'Slowed (<1.0 baseline)' : 'Standard rate'}
+                  {agingPace < 1.0 ? copy.slowed : copy.standardRate}
                 </span>
               </div>
 
               <div className="p-3.5 bg-[#f8f9ff] rounded-lg border border-[#e2e8f0]">
                 <span className="font-['JetBrains_Mono'] text-[10px] text-[#565e74] uppercase block">
-                  Avg Biological Advantage
+                  {copy.avgAdvantage}
                 </span>
                 <div className="flex items-baseline gap-1.5 mt-1">
                   <span className="text-2xl font-bold text-[#006947]">
                     {Math.abs(avgDelta).toFixed(1)}
                   </span>
-                  <span className="text-xs text-[#565e74]">yrs younger</span>
+                  <span className="text-xs text-[#565e74]">{copy.yrsYounger}</span>
                 </div>
                 <span className="text-[10px] font-['JetBrains_Mono'] text-[#565e74]">
-                  Across all recorded panels
+                  {copy.across}
                 </span>
               </div>
             </div>
@@ -217,18 +222,18 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
           {/* Historical Test Panels Table */}
           <div>
             <h3 className="font-['JetBrains_Mono'] text-xs font-bold uppercase tracking-wider text-[#565e74] mb-3">
-              Historical Clinical Test Panels
+              {copy.panelsTitle}
             </h3>
             <div className="border border-[#cbd5e1] rounded-lg overflow-hidden">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-[#006194] text-white font-['JetBrains_Mono'] text-[11px]">
-                    <th className="py-2.5 px-3 font-semibold">Test Date</th>
-                    <th className="py-2.5 px-3 font-semibold">Facility / Lab Source</th>
-                    <th className="py-2.5 px-3 font-semibold">Calendar Age</th>
-                    <th className="py-2.5 px-3 font-semibold">Biological PhenoAge</th>
-                    <th className="py-2.5 px-3 font-semibold">Variance (Δ)</th>
-                    <th className="py-2.5 px-3 font-semibold">Clinical Status</th>
+                    <th className="py-2.5 px-3 font-semibold">{copy.colDate}</th>
+                    <th className="py-2.5 px-3 font-semibold">{copy.colFacility}</th>
+                    <th className="py-2.5 px-3 font-semibold">{copy.colCalendar}</th>
+                    <th className="py-2.5 px-3 font-semibold">{copy.colPheno}</th>
+                    <th className="py-2.5 px-3 font-semibold">{copy.colVariance}</th>
+                    <th className="py-2.5 px-3 font-semibold">{copy.colStatus}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#e2e8f0]">
@@ -244,10 +249,10 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
                         </td>
                         <td className="py-2.5 px-3 text-[#3f4850]">{item.labSource}</td>
                         <td className="py-2.5 px-3 font-['JetBrains_Mono'] text-[#565e74]">
-                          {item.chronologicalAge.toFixed(1)} yrs
+                          {item.chronologicalAge.toFixed(1)} {m.shell.yrs}
                         </td>
                         <td className="py-2.5 px-3 font-['JetBrains_Mono'] font-bold text-[#006947]">
-                          {item.phenoAge.toFixed(1)} yrs
+                          {item.phenoAge.toFixed(1)} {m.shell.yrs}
                         </td>
                         <td className="py-2.5 px-3 font-['JetBrains_Mono'] font-bold">
                           <span
@@ -260,13 +265,13 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
                             {item.delta > 0
                               ? `+${item.delta.toFixed(1)}`
                               : `${item.delta.toFixed(1)}`}{' '}
-                            yrs
+                            {m.shell.yrs}
                           </span>
                         </td>
                         <td className="py-2.5 px-3">
                           <span className="inline-flex items-center gap-1 font-medium text-[#006947]">
                             <CheckCircle className="w-3.5 h-3.5" />
-                            {isDecel ? 'Decelerated Aging' : 'Standard Baseline'}
+                            {isDecel ? copy.deceleratedAging : copy.standardBaseline}
                           </span>
                         </td>
                       </tr>
@@ -281,10 +286,10 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-['JetBrains_Mono'] text-xs font-bold uppercase tracking-wider text-[#565e74]">
-                Biomarker Longitudinal Measurements Matrix (9 Parameters)
+                {copy.matrixTitle}
               </h3>
               <span className="font-['JetBrains_Mono'] text-[10px] text-[#006194]">
-                Standardized SI/US Units
+                {copy.matrixMeta}
               </span>
             </div>
 
@@ -292,9 +297,9 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
               <table className="w-full text-left text-xs border-collapse min-w-[640px]">
                 <thead>
                   <tr className="bg-[#0b1c30] text-white font-['JetBrains_Mono'] text-[11px]">
-                    <th className="py-2.5 px-3 font-semibold">Biomarker</th>
-                    <th className="py-2.5 px-3 font-semibold">Unit</th>
-                    <th className="py-2.5 px-3 font-semibold">Optimal Range</th>
+                    <th className="py-2.5 px-3 font-semibold">{copy.colBiomarker}</th>
+                    <th className="py-2.5 px-3 font-semibold">{copy.colUnit}</th>
+                    <th className="py-2.5 px-3 font-semibold">{copy.colOptimal}</th>
                     {sortedHistory.map((h) => (
                       <th key={h.id} className="py-2.5 px-3 font-semibold text-center">
                         {h.date}
@@ -308,7 +313,9 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
                       key={bio.id}
                       className={bIdx % 2 === 0 ? 'bg-[#ffffff]' : 'bg-[#f8fafc]'}
                     >
-                      <td className="py-2.5 px-3 font-semibold text-[#0b1c30]">{bio.name}</td>
+                      <td className="py-2.5 px-3 font-semibold text-[#0b1c30]">
+                        {isBiomarkerId(bio.id) ? m.biomarkers[bio.id].name : bio.name}
+                      </td>
                       <td className="py-2.5 px-3 font-['JetBrains_Mono'] text-[11px] text-[#565e74]">
                         {bio.unit}
                       </td>
@@ -354,27 +361,18 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
           <div className="p-4 bg-[#eff4ff] rounded-xl border border-[#dce9ff] text-xs space-y-2">
             <div className="flex items-center gap-2 font-bold text-[#006194] font-['JetBrains_Mono'] text-[11px]">
               <Sparkles className="w-4 h-4" />
-              <span>CLINICAL LONGEVITY TRAJECTORY INTERPRETATION</span>
+              <span>{copy.interpretation}</span>
             </div>
             <p className="text-[#3f4850] leading-relaxed">
-              <strong>Pace of Aging Analysis:</strong> The patient exhibits an annualized aging rate
-              of <strong>{agingPace} biological years per calendar year</strong>. An aging pace below
-              1.0 denotes decelerated physiological decay across organ systems (immune, renal, metabolic,
-              and hepatic).
+              {fill(copy.paceAnalysis, { pace: agingPace })}
             </p>
             <p className="text-[#3f4850] leading-relaxed">
-              <strong>Levine Gompertz Hazard Reference:</strong> PhenoAge biological age calculation
-              is based on NHANES proportional mortality hazard coefficients with p &lt; 0.001 across
-              9,926 multi-ethnic subjects. Biomarkers such as high serum albumin and suppressed hs-CRP
-              exert strong negative hazard coefficients, indicating preserved vitality.
+              {copy.hazardRef}
             </p>
             <div className="pt-2 text-[10px] text-[#64748b] border-t border-[#dce9ff] flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-              <span>
-                Reference: Levine ME et al. An epigenetic biomarker of aging for lifespan and healthspan.
-                <em>Aging (Albany NY)</em>. 2018;10(4):573-591.
-              </span>
+              <span>{copy.citation}</span>
               <span className="font-['JetBrains_Mono'] font-bold text-[#006194]">
-                Document ID: PA-RPT-{latest.hash?.slice(0, 8) || 'VERIFIED'}
+                {fill(copy.documentId, { id: latest.hash?.slice(0, 8) || 'VERIFIED' })}
               </span>
             </div>
           </div>
@@ -383,33 +381,33 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
           <div className="pt-4 border-t border-[#cbd5e1] grid grid-cols-1 sm:grid-cols-2 gap-8 text-xs text-[#565e74]">
             <div>
               <div className="border-b border-[#94a3b8] pb-8 mb-2"></div>
-              <span className="font-semibold block text-[#0b1c30]">Reviewing Clinician / Longevity Practitioner</span>
-              <span className="text-[10px]">Medical License &amp; Signature</span>
+              <span className="font-semibold block text-[#0b1c30]">{copy.clinician}</span>
+              <span className="text-[10px]">{copy.license}</span>
             </div>
             <div>
               <div className="border-b border-[#94a3b8] pb-8 mb-2"></div>
-              <span className="font-semibold block text-[#0b1c30]">Patient / Participant Acknowledgement</span>
-              <span className="text-[10px]">Date &amp; Signature</span>
+              <span className="font-semibold block text-[#0b1c30]">{copy.participant}</span>
+              <span className="text-[10px]">{copy.signature}</span>
             </div>
           </div>
         </div>
 
         {/* Footer actions bar (Hidden on print) */}
         <div className="no-print bg-[#f8f9ff] px-6 py-3 border-t border-[#e2e8f0] flex items-center justify-between text-xs text-[#565e74] shrink-0">
-          <span>Formatted for standard letter / A4 print layout</span>
+          <span>{copy.layout}</span>
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
               className="px-4 py-2 rounded-lg border border-[#cbd5e1] text-[#565e74] hover:bg-[#ffffff] font-medium transition-colors cursor-pointer"
             >
-              Close
+              {copy.closeAction}
             </button>
             <button
               onClick={handleDownloadPDF}
               className="px-4 py-2 rounded-lg bg-[#006194] hover:bg-[#007bb9] text-white font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <FileDown className="w-4 h-4" />
-              <span>Export PDF</span>
+              <span>{copy.exportPdf}</span>
             </button>
           </div>
         </div>

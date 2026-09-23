@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { TabType, LabPanelData, HistoricalTestRecord, AccountState, PhenoAgeCalculation } from './types';
 import { INITIAL_BIOMARKERS } from './data/phenoAgeData';
-import { PHENOAGE_DISCLAIMER, fetchPhenoAge, PhenoAgeScore } from './api/phenoage';
+import { fetchPhenoAge, PhenoAgeScore } from './api/phenoage';
 import { displayBiomarkerScores, displayPercentile, generateCryptoHash } from './utils/phenoAgeMath';
 import {
   clearStoredToken,
@@ -26,6 +26,8 @@ import { SeedPhraseModal } from './components/SeedPhraseModal';
 import { TerminalModal } from './components/TerminalModal';
 import { Footer } from './components/Footer';
 import { SplashScreen } from './components/SplashScreen';
+import { getActiveI18n } from './i18n/catalog';
+import { useI18n } from './i18n/I18nProvider';
 
 const SPLASH_SEEN_KEY = 'notmice.splashSeen';
 
@@ -62,6 +64,7 @@ function tutorialPanel(): LabPanelData {
 }
 
 export default function App() {
+  const { m } = useI18n();
   const [activeTab, setActiveTab] = useState<TabType>('overview-landing');
   const [chronologicalAge, setChronologicalAge] = useState<number>(42.0);
   const [biomarkers, setBiomarkers] = useState<Record<string, number>>(INITIAL_BIOMARKERS);
@@ -107,7 +110,7 @@ export default function App() {
     };
   }, []);
 
-  const publicIdLabel = account?.publicId ?? 'Guest';
+  const publicIdLabel = account?.publicId ?? m.nav.guest;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -121,7 +124,7 @@ export default function App() {
           if (err instanceof DOMException && err.name === 'AbortError') {
             return;
           }
-          setPhenoAgeError(err instanceof Error ? err.message : 'PhenoAge request failed');
+          setPhenoAgeError(err instanceof Error ? err.message : getActiveI18n().messages.shell.phenoAgeFailed);
         });
     }, 200);
     return () => {
@@ -142,7 +145,7 @@ export default function App() {
         biomarkerScores,
         isValid: false,
         activeCount: Object.keys(biomarkers).length,
-        disclaimer: PHENOAGE_DISCLAIMER,
+        disclaimer: m.shell.disclaimer,
       };
     }
     return {
@@ -154,9 +157,9 @@ export default function App() {
       biomarkerScores,
       isValid: true,
       activeCount: Object.keys(biomarkers).length,
-      disclaimer: phenoAgeScore.disclaimer,
+      disclaimer: m.shell.disclaimer,
     };
-  }, [biomarkers, chronologicalAge, phenoAgeScore]);
+  }, [biomarkers, chronologicalAge, m.shell.disclaimer, phenoAgeScore]);
 
   const activeHash = useMemo(() => {
     return generateCryptoHash({ chronologicalAge, biomarkers });
@@ -216,7 +219,7 @@ export default function App() {
       });
       setRevealedMnemonic(created.mnemonic.trim().split(/\s+/));
     } catch (err) {
-      setAuthError(err instanceof Error ? err.message : 'Could not create account');
+      setAuthError(err instanceof Error ? err.message : getActiveI18n().messages.shell.couldNotCreateAccount);
     } finally {
       setAuthBusy(false);
     }
@@ -236,7 +239,7 @@ export default function App() {
       });
       setRevealedMnemonic(null);
     } catch (err) {
-      setAuthError(err instanceof Error ? err.message : 'Could not sign in');
+      setAuthError(err instanceof Error ? err.message : getActiveI18n().messages.shell.couldNotSignIn);
     } finally {
       setAuthBusy(false);
     }

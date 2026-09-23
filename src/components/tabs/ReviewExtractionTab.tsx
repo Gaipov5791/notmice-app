@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { TabType, LabPanelData } from '../../types';
 import { PHENOAGE_BIOMARKERS } from '../../data/phenoAgeData';
 import { confirmLabExtraction } from '../../api/uploads';
+import { isBiomarkerId } from '../../i18n/biomarkerIds';
+import { fill } from '../../i18n/fill';
+import { getActiveI18n } from '../../i18n/catalog';
+import { useI18n } from '../../i18n/I18nProvider';
 import {
   CheckSquare,
   CheckCircle2,
@@ -28,6 +32,8 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
   setActiveTab,
   accessToken,
 }) => {
+  const { m } = useI18n();
+  const copy = m.review;
   const [localValues, setLocalValues] = useState<Record<string, number>>({
     ...currentPanel.biomarkers,
   });
@@ -91,7 +97,7 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
             markers: fallback,
           });
         } catch (err) {
-          setConfirmError(err instanceof Error ? err.message : 'Confirm failed');
+          setConfirmError(err instanceof Error ? err.message : getActiveI18n().messages.shell.confirmFailed);
           setConfirmBusy(false);
           return;
         }
@@ -110,26 +116,26 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="bg-[#cce5ff] text-[#004b73] font-['JetBrains_Mono'] text-xs font-semibold px-2 py-0.5 rounded">
-              Pipeline Stage 03
+              {copy.stage}
             </span>
             <span className="font-['JetBrains_Mono'] text-xs text-[#565e74]">
-              Human-in-the-Loop Verification
+              {copy.stageMeta}
             </span>
           </div>
           <h1 className="font-['Inter'] text-2xl lg:text-3xl font-bold text-[#0b1c30]">
-            Review & Extraction Verification
+            {copy.title}
           </h1>
           <p className="font-['Inter'] text-sm text-[#3f4850] mt-1">
-            {currentPanel.sourceType === 'demo' ? 'Tutorial example: ' : 'Source document: '}
+            {currentPanel.sourceType === 'demo' ? copy.tutorialPrefix : copy.sourcePrefix}
             <strong className="text-[#0b1c30]">
-              {currentPanel.fileName ?? 'Untitled panel'}
+              {currentPanel.fileName ?? copy.untitled}
             </strong>{' '}
-            • Lab: {currentPanel.labName} • Test Date: {currentPanel.testDate}
-            {currentPanel.hash.length === 64 ? ` • SHA-256 ${currentPanel.hash.slice(0, 12)}…` : ''}
+            • {fill(copy.labDate, { lab: currentPanel.labName, date: currentPanel.testDate })}
+            {currentPanel.hash.length === 64 ? ` • ${fill(copy.sha, { prefix: currentPanel.hash.slice(0, 12) })}` : ''}
           </p>
           {currentPanel.sourceType === 'demo' && (
             <p className="font-['Inter'] text-xs text-[#565e74] mt-2">
-              These numbers are a worked example, not a patient panel. Confirming them does not store a lab document.
+              {copy.demoNote}
             </p>
           )}
           {confirmError && (
@@ -144,7 +150,7 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
             className="flex items-center gap-1.5 px-3 py-2 rounded text-xs font-semibold text-[#3f4850] hover:bg-[#eff4ff] border border-[#cbd5e1] transition-colors cursor-pointer"
           >
             <RotateCcw className="w-4 h-4" />
-            <span>Re-upload</span>
+            <span>{copy.reupload}</span>
           </button>
           <button
             onClick={handleVerifyAll}
@@ -152,7 +158,7 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
             className="flex items-center gap-2 px-5 py-2.5 rounded font-['Inter'] text-xs font-bold bg-[#006194] hover:bg-[#007bb9] text-[#ffffff] shadow-sm transition-all cursor-pointer disabled:opacity-60"
           >
             <CheckCircle2 className="w-4 h-4" />
-            <span>Verify All & Compute PhenoAge</span>
+            <span>{copy.verifyAll}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
@@ -166,10 +172,10 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
             <div className="flex items-center justify-between">
               <span className="font-['Inter'] text-xs font-bold text-[#0b1c30] flex items-center gap-1.5">
                 <FileSearch className="w-4 h-4 text-[#006194]" />
-                Lab Report Crop Inspector
+                {copy.cropTitle}
               </span>
               <span className="font-['JetBrains_Mono'] text-[10px] bg-[#eff4ff] text-[#006194] px-1.5 py-0.5 rounded font-semibold">
-                Canvas 300 DPI
+                {copy.canvas}
               </span>
             </div>
 
@@ -177,7 +183,7 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
             <div className="bg-[#f8f9ff] border border-[#dce9ff] rounded-lg p-4 font-['JetBrains_Mono'] text-xs space-y-3 relative shadow-inner">
               <div className="text-[10px] text-[#565e74] border-b border-[#e2e8f0] pb-2 flex justify-between">
                 <span>QUEST DIAGNOSTICS INC.</span>
-                <span>COLL: {currentPanel.testDate}</span>
+                <span>{fill(copy.collected, { date: currentPanel.testDate })}</span>
               </div>
 
               {/* Snippet Line Items */}
@@ -263,18 +269,21 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
             </div>
 
             {/* Focused Marker Detail Note */}
-            {activeBio && (
+            {activeBio && isBiomarkerId(activeBio.id) && (
               <div className="p-3 bg-[#eff4ff] rounded border border-[#dce9ff] text-xs space-y-1">
                 <div className="flex justify-between font-bold text-[#0b1c30]">
-                  <span>Focused: {activeBio.name}</span>
-                  <span className="font-mono text-[#006194]">LOINC {activeBio.loinc}</span>
+                  <span>{fill(copy.focused, { name: m.biomarkers[activeBio.id].name })}</span>
+                  <span className="font-mono text-[#006194]">{fill(copy.loinc, { code: activeBio.loinc })}</span>
                 </div>
                 <p className="text-[#3f4850] text-[11px] leading-relaxed">
-                  {activeBio.weightDescription}
+                  {m.biomarkers[activeBio.id].weight}
                 </p>
                 <div className="text-[10px] text-[#006947] font-semibold pt-1">
-                  Optimal interval: {activeBio.optimalRange[0]} - {activeBio.optimalRange[1]}{' '}
-                  {activeBio.unit}
+                  {fill(copy.optimalInterval, {
+                    min: activeBio.optimalRange[0],
+                    max: activeBio.optimalRange[1],
+                    unit: activeBio.unit,
+                  })}
                 </div>
               </div>
             )}
@@ -287,16 +296,14 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
             <div className="px-5 py-4 bg-[#eff4ff] border-b border-[#dce9ff] flex items-center justify-between">
               <div>
                 <span className="font-['Inter'] text-sm font-bold text-[#0b1c30] block">
-                  Extracted Biomarker Matrix
+                  {copy.matrixTitle}
                 </span>
                 <span className="font-['Inter'] text-xs text-[#565e74]">
-                  {currentPanel.sourceType === 'demo'
-                    ? 'Worked example. These values were not read from a laboratory file.'
-                    : 'Verify each value against your physical or digital lab paper.'}
+                  {currentPanel.sourceType === 'demo' ? copy.demoMatrix : copy.realMatrix}
                 </span>
               </div>
               <span className="font-['JetBrains_Mono'] text-xs bg-[#ffffff] border border-[#dce9ff] px-2.5 py-1 rounded text-[#006947] font-bold">
-                {currentPanel.sourceType === 'demo' ? 'Tutorial' : '9/9 Extracted'}
+                {currentPanel.sourceType === 'demo' ? copy.tutorialBadge : copy.extractedBadge}
               </span>
             </div>
 
@@ -304,11 +311,11 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
               <table className="w-full text-left font-['Inter'] text-xs">
                 <thead>
                   <tr className="bg-[#f8f9ff] text-[#565e74] font-['JetBrains_Mono'] text-[11px] uppercase tracking-wider border-b border-[#e2e8f0]">
-                    <th className="py-3 px-4">Biomarker & LOINC</th>
-                    <th className="py-3 px-3">Extracted Value</th>
-                    <th className="py-3 px-3">Optimal Target</th>
-                    <th className="py-3 px-3">Confidence</th>
-                    <th className="py-3 px-3 text-right">Sign-off</th>
+                    <th className="py-3 px-4">{copy.colMarker}</th>
+                    <th className="py-3 px-3">{copy.colValue}</th>
+                    <th className="py-3 px-3">{copy.colTarget}</th>
+                    <th className="py-3 px-3">{copy.colConfidence}</th>
+                    <th className="py-3 px-3 text-right">{copy.colSignoff}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#f1f5f9]">
@@ -329,9 +336,12 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
                         {/* Biomarker and LOINC */}
                         <td className="py-3.5 px-4">
                           <div className="flex flex-col">
-                            <span className="font-bold text-[#0b1c30]">{bio.name}</span>
+                            <span className="font-bold text-[#0b1c30]">
+                              {isBiomarkerId(bio.id) ? m.biomarkers[bio.id].name : bio.name}
+                            </span>
                             <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]">
-                              LOINC {bio.loinc} • {bio.domain}
+                              {fill(copy.loinc, { code: bio.loinc })} •{' '}
+                              {isBiomarkerId(bio.id) ? m.biomarkers[bio.id].domain : bio.domain}
                             </span>
                           </div>
                         </td>
@@ -401,8 +411,7 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
             <div className="flex items-center gap-2 text-xs text-[#3f4850]">
               <ShieldCheck className="w-5 h-5 text-[#006947]" />
               <span>
-                All 9 values checked against NHANES reference parameters. Ready for PhenoAge Gompertz
-                execution.
+                {copy.readyBar}
               </span>
             </div>
 
@@ -411,7 +420,7 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
               disabled={confirmBusy}
               className="w-full sm:w-auto px-6 py-2.5 bg-[#006194] hover:bg-[#007bb9] text-white font-['Inter'] text-xs font-bold rounded shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60"
             >
-              <span>Verify All & Compute PhenoAge</span>
+              <span>{copy.verifyAll}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>

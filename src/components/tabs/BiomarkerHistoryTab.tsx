@@ -21,6 +21,9 @@ import {
 } from 'lucide-react';
 import { PrintableReportModal } from '../PrintableReportModal';
 import { generateHistoricalReportPDF } from '../../utils/pdfReportGenerator';
+import { isBiomarkerId } from '../../i18n/biomarkerIds';
+import { fill } from '../../i18n/fill';
+import { useI18n } from '../../i18n/I18nProvider';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -49,6 +52,8 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
   onSelectRecord,
   setActiveTab,
 }) => {
+  const { m } = useI18n();
+  const copy = m.history;
   const [selectedBiomarker, setSelectedBiomarker] = useState<string>('crp');
   const [chartViewMode, setChartViewMode] = useState<'both' | 'delta'>('both');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -65,20 +70,7 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
       const parts = record.date.split('-');
       const year = parts[0];
       const month = parts[1] || '01';
-      const monthNames = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec',
-      ];
+      const monthNames = copy.months;
       const mIdx = parseInt(month, 10) - 1;
       const formattedDate = `${monthNames[mIdx] || month} ${year}`;
 
@@ -98,7 +90,7 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
         hash: record.hash,
       };
     });
-  }, [history]);
+  }, [copy.months, history]);
 
   // Derived trajectory statistics
   const trajectoryStats = useMemo(() => {
@@ -201,19 +193,17 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="bg-[#cce5ff] text-[#004b73] font-['JetBrains_Mono'] text-xs font-semibold px-2 py-0.5 rounded">
-              Longitudinal Protocol
+              {copy.stage}
             </span>
             <span className="font-['JetBrains_Mono'] text-xs text-[#565e74]">
-              Multi-Year PhenoAge Trajectory
+              {copy.stageMeta}
             </span>
           </div>
           <h1 className="font-['Inter'] text-2xl lg:text-3xl font-bold text-[#0b1c30]">
-            Biomarker & PhenoAge History
+            {copy.title}
           </h1>
           <p className="font-['Inter'] text-sm text-[#3f4850] mt-1 max-w-2xl">
-            {history.length === 0
-              ? 'Tutorial start: no laboratory history is loaded. The numbers on the landing page are a worked example, not a patient record. A panel appears here only after you save one from this session.'
-              : 'Saved panels from this browser session. This list is not loaded from the laboratory dataset.'}
+            {history.length === 0 ? copy.emptyLead : copy.sessionLead}
           </p>
         </div>
 
@@ -221,10 +211,10 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
           <button
             onClick={() => setShowReportModal(true)}
             className="flex items-center gap-2 px-3.5 py-2.5 rounded-lg font-['Inter'] text-xs font-semibold bg-[#ffffff] hover:bg-[#f8fafc] text-[#0b1c30] border border-[#cbd5e1] shadow-2xs hover:border-[#94a3b8] transition-all cursor-pointer"
-            title="Export clean, printable PDF report of historical trends and biomarkers"
+            title={copy.exportTitle}
           >
             <FileDown className="w-4 h-4 text-[#006194]" />
-            <span>Export PDF Report</span>
+            <span>{copy.export}</span>
           </button>
 
           <button
@@ -232,7 +222,7 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
             className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-['Inter'] text-xs font-bold bg-[#006194] hover:bg-[#007bb9] text-[#ffffff] shadow-sm transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Test Date</span>
+            <span>{copy.addDate}</span>
           </button>
         </div>
       </div>
@@ -245,14 +235,14 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
             <div className="flex items-center gap-2 mb-1">
               <span className="font-['Inter'] text-base font-bold text-[#0b1c30] flex items-center gap-2">
                 <LineChartIcon className="w-5 h-5 text-[#006194]" />
-                PhenoAge™ Longitudinal Trend (Recharts Engine)
+                {copy.chartTitle}
               </span>
               <span className="font-['JetBrains_Mono'] text-[11px] bg-[#eff4ff] text-[#006194] border border-[#dce9ff] px-2 py-0.5 rounded font-semibold">
-                Interactive Telemetry
+                {copy.interactive}
               </span>
             </div>
             <p className="font-['Inter'] text-xs text-[#565e74]">
-              High-resolution dynamic trajectory plotting biological PhenoAge alongside calendar aging. Hover over test points to inspect clinical parameters.
+              {copy.chartLead}
             </p>
           </div>
 
@@ -266,7 +256,7 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
                   : 'text-[#3f4850] hover:text-[#0b1c30]'
               }`}
             >
-              PhenoAge vs Chrono
+              {copy.vsChrono}
             </button>
             <button
               onClick={() => setChartViewMode('delta')}
@@ -276,7 +266,7 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
                   : 'text-[#3f4850] hover:text-[#0b1c30]'
               }`}
             >
-              Aging Variance (Δ)
+              {copy.variance}
             </button>
           </div>
         </div>
@@ -284,58 +274,58 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
         {/* Analytical KPI Cards Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
           <div className="p-3.5 bg-[#f8f9ff] rounded-lg border border-[#e2e8f0] flex flex-col justify-between">
-            <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]">LATEST PHENOAGE</span>
+            <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]">{copy.latestPheno}</span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="font-['Inter'] text-2xl font-bold text-[#006947]">
                 {history.length === 0 ? '—' : trajectoryStats.latestPheno.toFixed(1)}
               </span>
-              <span className="text-[11px] text-[#565e74]">yrs</span>
+              <span className="text-[11px] text-[#565e74]">{m.shell.yrs}</span>
             </div>
             <span className="font-['JetBrains_Mono'] text-[10px] text-[#565e74] font-semibold mt-1">
               {history.length === 0
-                ? 'No panels yet'
+                ? copy.noPanels
                 : trajectoryStats.totalDelta <= 0
-                  ? 'Decelerated Profile'
-                  : 'Accelerated'}
+                  ? copy.deceleratedProfile
+                  : copy.accelerated}
             </span>
           </div>
 
           <div className="p-3.5 bg-[#f8f9ff] rounded-lg border border-[#e2e8f0] flex flex-col justify-between">
-            <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]">PACE OF AGING</span>
+            <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]">{copy.pace}</span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="font-['Inter'] text-2xl font-bold text-[#006194]">
                 {history.length === 0 ? '—' : trajectoryStats.agingPace}
               </span>
-              <span className="text-[11px] text-[#565e74]">bio-yr / cal-yr</span>
+              <span className="text-[11px] text-[#565e74]">{copy.paceUnit}</span>
             </div>
             <span className="font-['JetBrains_Mono'] text-[10px] text-[#565e74] font-semibold mt-1">
               {history.length === 0
-                ? 'No panels yet'
+                ? copy.noPanels
                 : trajectoryStats.agingPace < 1.0
-                  ? 'Slowed aging rate (<1.0)'
-                  : 'Baseline pace'}
+                  ? copy.slowed
+                  : copy.baselinePace}
             </span>
           </div>
 
           <div className="p-3.5 bg-[#f8f9ff] rounded-lg border border-[#e2e8f0] flex flex-col justify-between">
-            <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]">AVG PHENO ADVANTAGE</span>
+            <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]">{copy.avgAdvantage}</span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="font-['Inter'] text-2xl font-bold text-[#006947]">
                 {history.length === 0 ? '—' : Math.abs(trajectoryStats.avgDelta).toFixed(1)}
               </span>
               <span className="text-[11px] text-[#565e74]">
-                {history.length === 0 ? 'years' : 'years younger'}
+                {history.length === 0 ? m.shell.years : copy.yearsYounger}
               </span>
             </div>
             <span className="font-['JetBrains_Mono'] text-[10px] text-[#565e74] mt-1">
               {history.length === 0
-                ? 'No panels yet'
-                : `Across ${history.length} laboratory test points`}
+                ? copy.noPanels
+                : fill(copy.acrossPoints, { count: history.length })}
             </span>
           </div>
 
           <div className="p-3.5 bg-[#f8f9ff] rounded-lg border border-[#e2e8f0] flex flex-col justify-between">
-            <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]">NET BIO CHANGE</span>
+            <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]">{copy.netChange}</span>
             <div className="flex items-baseline gap-2 mt-1">
               <span
                 className={`font-['Inter'] text-2xl font-bold ${
@@ -348,10 +338,10 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
                     ? `+${trajectoryStats.netBioChange}`
                     : trajectoryStats.netBioChange}
               </span>
-              <span className="text-[11px] text-[#565e74]">yrs net</span>
+              <span className="text-[11px] text-[#565e74]">{copy.yrsNet}</span>
             </div>
             <span className="font-['JetBrains_Mono'] text-[10px] text-[#565e74] mt-1">
-              {history.length === 0 ? 'No panels yet' : 'From baseline to latest panel'}
+              {history.length === 0 ? copy.noPanels : copy.fromBaseline}
             </span>
           </div>
         </div>
@@ -406,19 +396,19 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
                         </div>
                         <div className="space-y-1.5 font-['JetBrains_Mono']">
                           <div className="flex justify-between items-center text-[#565e74]">
-                            <span>Chrono Age:</span>
+                            <span>{copy.chronoAge}</span>
                             <span className="font-bold text-[#0b1c30]">
                               {data.chronologicalAge.toFixed(1)} yrs
                             </span>
                           </div>
                           <div className="flex justify-between items-center text-[#006947]">
-                            <span className="font-bold">Biological PhenoAge:</span>
+                            <span className="font-bold">{copy.biologicalPheno}</span>
                             <span className="font-extrabold text-[#006947] text-sm">
                               {data.phenoAge.toFixed(1)} yrs
                             </span>
                           </div>
                           <div className="flex justify-between items-center pt-1.5 border-t border-[#f1f5f9]">
-                            <span className="text-[#565e74]">Aging Variance (Δ):</span>
+                            <span className="text-[#565e74]">{copy.agingVariance}</span>
                             <span
                               className={`font-bold px-2 py-0.5 rounded text-[11px] ${
                                 isDecelerated
@@ -433,9 +423,9 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
                             </span>
                           </div>
                           <div className="pt-2 mt-1 border-t border-[#f1f5f9] text-[10px] text-[#565e74] flex justify-between">
-                            <span>hs-CRP: {data.crp} mg/L</span>
-                            <span>Alb: {data.albumin} g/L</span>
-                            <span>RDW: {data.rdw}%</span>
+                            <span>{fill(copy.hsCrp, { value: data.crp })}</span>
+                            <span>{fill(copy.alb, { value: data.albumin })}</span>
+                            <span>{fill(copy.rdw, { value: data.rdw })}</span>
                           </div>
                         </div>
                       </div>
@@ -460,7 +450,7 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
                     dataKey="phenoAge"
                     fill="url(#phenoFillGradient)"
                     stroke="none"
-                    name="Biological Youth Zone"
+                    name={copy.youthZone}
                   />
                   <Line
                     type="monotone"
@@ -469,7 +459,7 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
                     strokeWidth={2}
                     strokeDasharray="5 5"
                     dot={{ r: 4, fill: '#64748b' }}
-                    name="Chronological Calendar Age"
+                    name={copy.calendarAge}
                   />
                   <Line
                     type="monotone"
@@ -478,7 +468,7 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
                     strokeWidth={3.5}
                     dot={{ r: 5, fill: '#00855b', stroke: '#ffffff', strokeWidth: 2 }}
                     activeDot={{ r: 7, fill: '#00855b', stroke: '#ffffff', strokeWidth: 3 }}
-                    name="Biological PhenoAge™"
+                    name={copy.phenoSeries}
                   />
                 </>
               ) : (
@@ -488,7 +478,7 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
                     stroke="#94a3b8"
                     strokeDasharray="4 4"
                     label={{
-                      value: 'Chronological Baseline (Δ = 0)',
+                      value: copy.zeroDelta,
                       fill: '#64748b',
                       fontSize: 11,
                       position: 'top',
@@ -499,7 +489,7 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
                     dataKey="delta"
                     fill="url(#deltaGradient)"
                     stroke="none"
-                    name="Biological Variance Area"
+                    name={copy.varianceArea}
                   />
                   <Line
                     type="monotone"
@@ -508,7 +498,7 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
                     strokeWidth={3}
                     dot={{ r: 5, fill: '#006194', stroke: '#ffffff', strokeWidth: 2 }}
                     activeDot={{ r: 7, fill: '#006194', stroke: '#ffffff', strokeWidth: 3 }}
-                    name="PhenoAge Variance (Δ years)"
+                    name={copy.varianceSeries}
                   />
                 </>
               )}
@@ -521,11 +511,11 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-[#006194] shrink-0" />
             <span>
-              <strong>Trajectory Dynamics:</strong> Trajectory reflects Levine's 10-year NHANES Gompertz proportional hazard formula. Negative divergence indicates prolonged healthspan.
+              <strong>{copy.trajectory}</strong>
             </span>
           </div>
           <span className="font-['JetBrains_Mono'] text-[11px] text-[#006194] font-semibold shrink-0">
-            P-Value Calibrated: p &lt; 0.001
+            {copy.pValue}
           </span>
         </div>
       </div>
@@ -537,18 +527,18 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <span className="font-['Inter'] text-sm font-bold text-[#0b1c30] block">
-                Longevity Vector: Biological vs Chronological Age
+                {copy.vectorTitle}
               </span>
               <span className="font-['Inter'] text-xs text-[#565e74]">
-                Widening green gap represents growing biological youthfulness.
+                {copy.vectorLead}
               </span>
             </div>
             <div className="flex items-center gap-3 text-xs font-['JetBrains_Mono']">
               <span className="flex items-center gap-1.5 text-[#0b1c30]">
-                <span className="w-3 h-0.5 bg-[#565e74] inline-block"></span> Chrono Age
+                <span className="w-3 h-0.5 bg-[#565e74] inline-block"></span> {copy.chronoLegend}
               </span>
               <span className="flex items-center gap-1.5 text-[#006947] font-bold">
-                <span className="w-3 h-0.5 bg-[#006947] inline-block"></span> PhenoAge
+                <span className="w-3 h-0.5 bg-[#006947] inline-block"></span> {copy.phenoLegend}
               </span>
             </div>
           </div>
@@ -653,7 +643,7 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
         <div className="lg:col-span-5 bg-[#ffffff] p-6 rounded-xl border border-[#cbd5e1] shadow-xs flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <span className="font-['Inter'] text-sm font-bold text-[#0b1c30]">
-              Biomarker Specific Trajectory
+              {copy.markerTrack}
             </span>
             <select
               value={selectedBiomarker}
@@ -662,7 +652,7 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
             >
               {PHENOAGE_BIOMARKERS.map((b) => (
                 <option key={b.id} value={b.id}>
-                  {b.name} ({b.unit})
+                  {isBiomarkerId(b.id) ? m.biomarkers[b.id].name : b.name} ({b.unit})
                 </option>
               ))}
             </select>
@@ -670,10 +660,13 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
 
           {activeBioDef && (
             <div className="text-xs text-[#565e74] flex justify-between bg-[#f8f9ff] p-2.5 rounded border border-[#e2e8f0] font-['JetBrains_Mono']">
-              <span>LOINC: {activeBioDef.loinc}</span>
+              <span>{fill(copy.loinc, { code: activeBioDef.loinc })}</span>
               <span className="text-[#006947] font-semibold">
-                Target: {activeBioDef.optimalRange[0]} - {activeBioDef.optimalRange[1]}{' '}
-                {activeBioDef.unit}
+                {fill(copy.targetRange, {
+                  min: activeBioDef.optimalRange[0],
+                  max: activeBioDef.optimalRange[1],
+                  unit: activeBioDef.unit,
+                })}
               </span>
             </div>
           )}
@@ -732,10 +725,10 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
         <div className="px-5 py-4 bg-[#eff4ff] border-b border-[#dce9ff] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="font-['Inter'] text-sm font-bold text-[#0b1c30]">
-              Longitudinal Testing Registry ({history.length} Panels Logged)
+              {fill(copy.registry, { count: history.length })}
             </span>
             <span className="font-['JetBrains_Mono'] text-xs text-[#006947] font-semibold bg-[#e6f4ea] px-2 py-0.5 rounded border border-[#b7e1cd]">
-              In-Memory Vault
+              {copy.inMemory}
             </span>
           </div>
 
@@ -745,7 +738,7 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#ffffff] hover:bg-[#f8fafc] text-[#006194] border border-[#cbd5e1] text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
             >
               <FileDown className="w-3.5 h-3.5" />
-              <span>Printable PDF Report</span>
+              <span>{copy.printable}</span>
             </button>
           </div>
         </div>
@@ -754,13 +747,13 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
           <table className="w-full text-left font-['Inter'] text-xs">
             <thead>
               <tr className="bg-[#f8f9ff] text-[#565e74] font-['JetBrains_Mono'] text-[11px] uppercase tracking-wider border-b border-[#e2e8f0]">
-                <th className="py-3 px-4">Test Date</th>
-                <th className="py-3 px-3">Laboratory</th>
-                <th className="py-3 px-3">Chrono Age</th>
-                <th className="py-3 px-3">PhenoAge</th>
-                <th className="py-3 px-3">Variance (Δ)</th>
-                <th className="py-3 px-3">Audit Proof</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                <th className="py-3 px-4">{copy.colDate}</th>
+                <th className="py-3 px-3">{copy.colLab}</th>
+                <th className="py-3 px-3">{copy.colChrono}</th>
+                <th className="py-3 px-3">{copy.colPheno}</th>
+                <th className="py-3 px-3">{copy.colVariance}</th>
+                <th className="py-3 px-3">{copy.colProof}</th>
+                <th className="py-3 px-4 text-right">{copy.colActions}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f1f5f9]">
@@ -800,13 +793,13 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
                         }}
                         className="px-2.5 py-1 rounded bg-[#eff4ff] hover:bg-[#e5eeff] text-[#006194] font-semibold text-[11px] transition-colors cursor-pointer"
                       >
-                        Load Engine
+                        {copy.loadEngine}
                       </button>
                       {history.length > 1 && (
                         <button
                           onClick={() => onDeleteHistory(record.id)}
                           className="p-1 rounded text-[#ba1a1a] hover:bg-[#fff1f2] transition-colors cursor-pointer"
-                          title="Delete entry"
+                          title={copy.deleteEntry}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -828,11 +821,11 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
             className="bg-[#ffffff] rounded-xl border border-[#cbd5e1] shadow-2xl max-w-md w-full p-6 space-y-4"
           >
             <h3 className="font-['Inter'] text-lg font-bold text-[#0b1c30]">
-              Log New Historical Test
+              {copy.addTitle}
             </h3>
             <div className="space-y-3 text-xs">
               <div>
-                <label className="block text-[#565e74] font-medium mb-1">Blood Test Date</label>
+                <label className="block text-[#565e74] font-medium mb-1">{copy.bloodDate}</label>
                 <input
                   type="date"
                   value={newDate}
@@ -843,7 +836,7 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
               </div>
               <div>
                 <label className="block text-[#565e74] font-medium mb-1">
-                  Chronological Age at Test
+                  {copy.chronoField}
                 </label>
                 <input
                   type="number"
@@ -855,13 +848,13 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-[#565e74] font-medium mb-1">Laboratory Source</label>
+                <label className="block text-[#565e74] font-medium mb-1">{copy.labSource}</label>
                 <input
                   type="text"
                   value={newLabSource}
                   onChange={(e) => setNewLabSource(e.target.value)}
                   className="w-full px-3 py-2 border border-[#cbd5e1] rounded font-['Inter']"
-                  placeholder="e.g. LabCorp, Quest, NHS"
+                  placeholder={copy.labPlaceholder}
                   required
                 />
               </div>
@@ -872,13 +865,13 @@ export const BiomarkerHistoryTab: React.FC<BiomarkerHistoryTabProps> = ({
                 onClick={() => setShowAddModal(false)}
                 className="px-4 py-2 border border-[#cbd5e1] rounded text-xs font-semibold text-[#565e74] hover:bg-[#eff4ff]"
               >
-                Cancel
+                {copy.cancel}
               </button>
               <button
                 type="submit"
                 className="px-4 py-2 bg-[#006194] text-white rounded text-xs font-semibold hover:bg-[#007bb9]"
               >
-                Add Test Panel
+                {copy.savePanel}
               </button>
             </div>
           </form>

@@ -1,0 +1,30 @@
+import type { AppMessages } from '../en';
+import { biomarkers } from './biomarkers';
+import { history } from './history';
+import { lifestyle } from './lifestyle';
+import { lifestyleUi } from './lifestyleUi';
+import { modals } from './modals';
+import { nav } from './nav';
+import { overview } from './overview';
+import { phenoage } from './phenoage';
+import { report } from './report';
+import { review } from './review';
+import { shell } from './shell';
+import { sovereignty } from './sovereignty';
+import { upload } from './upload';
+
+export const deMessages = {
+  nav,
+  shell,
+  overview,
+  upload,
+  review,
+  phenoage,
+  history,
+  sovereignty,
+  modals,
+  report,
+  biomarkers,
+  lifestyleUi,
+  lifestyle,
+} satisfies AppMessages;

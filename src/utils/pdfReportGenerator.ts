@@ -2,9 +2,16 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { HistoricalTestRecord } from '../types';
 import { PHENOAGE_BIOMARKERS } from '../data/phenoAgeData';
+import { getActiveI18n } from '../i18n/catalog';
+import { isBiomarkerId } from '../i18n/biomarkerIds';
+import { fill } from '../i18n/fill';
 
 export function generateHistoricalReportPDF(history: HistoricalTestRecord[]): void {
   if (!history || history.length === 0) return;
+
+  const { locale, messages } = getActiveI18n();
+  const copy = messages.report;
+  const dateLocale = locale === 'de' ? 'de-DE' : 'en-US';
 
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -43,13 +50,13 @@ export function generateHistoricalReportPDF(history: HistoricalTestRecord[]): vo
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
-  doc.text('PHENOAGE™ CLINICAL LONGEVITY REPORT', margin, 15);
+  doc.text(copy.pdfTitle, margin, 15);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(203, 213, 225); // #cbd5e1
   doc.text(
-    'Longitudinal Biomarker Trajectory & Epigenetic Aging Analysis (Levine NHANES Model)',
+    copy.pdfSubtitle,
     margin,
     22
   );
@@ -57,14 +64,14 @@ export function generateHistoricalReportPDF(history: HistoricalTestRecord[]): vo
   // Top Right Header Metadata
   doc.setFontSize(8);
   doc.setTextColor(148, 163, 184);
-  const printDate = new Date().toLocaleDateString('en-US', {
+  const printDate = new Date().toLocaleDateString(dateLocale, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
   });
-  doc.text(`Generated: ${printDate}`, pageWidth - margin, 15, { align: 'right' });
-  doc.text(`Panels Evaluated: ${sortedHistory.length}`, pageWidth - margin, 21, { align: 'right' });
-  doc.text('Status: Research index (Levine 2018)', pageWidth - margin, 27, { align: 'right' });
+  doc.text(fill(copy.generatedLine, { date: printDate }), pageWidth - margin, 15, { align: 'right' });
+  doc.text(fill(copy.panelsLine, { count: sortedHistory.length }), pageWidth - margin, 21, { align: 'right' });
+  doc.text(copy.statusLine, pageWidth - margin, 27, { align: 'right' });
 
   let currentY = 48;
 
@@ -72,7 +79,7 @@ export function generateHistoricalReportPDF(history: HistoricalTestRecord[]): vo
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   doc.setTextColor(11, 28, 48);
-  doc.text('EXECUTIVE LONGEVITY TRAJECTORY SUMMARY', margin, currentY);
+  doc.text(copy.pdfSummary, margin, currentY);
 
   currentY += 5;
 
@@ -82,27 +89,27 @@ export function generateHistoricalReportPDF(history: HistoricalTestRecord[]): vo
 
   const kpis = [
     {
-      title: 'LATEST PHENOAGE',
-      value: `${latest.phenoAge.toFixed(1)} yrs`,
-      sub: `vs Chrono ${latest.chronologicalAge.toFixed(1)} yrs`,
+      title: copy.latestPhenoPdf,
+      value: fill(copy.yrs, { value: latest.phenoAge.toFixed(1) }),
+      sub: `${messages.history.chronoLegend} ${latest.chronologicalAge.toFixed(1)}`,
       color: [0, 105, 71], // emerald
     },
     {
-      title: 'AGING VARIANCE (Δ)',
-      value: latest.delta <= 0 ? `${latest.delta.toFixed(1)} yrs` : `+${latest.delta.toFixed(1)} yrs`,
-      sub: latest.delta <= 0 ? 'Decelerated Profile' : 'Accelerated Aging',
+      title: copy.variancePdf,
+      value: latest.delta <= 0 ? fill(copy.yrs, { value: latest.delta.toFixed(1) }) : fill(copy.plusYrs, { value: latest.delta.toFixed(1) }),
+      sub: latest.delta <= 0 ? copy.decelerated : copy.accelerated,
       color: latest.delta <= 0 ? [0, 105, 71] : [186, 26, 26],
     },
     {
-      title: 'PACE OF AGING',
-      value: `${agingPace}x`,
-      sub: agingPace < 1.0 ? 'Slowed (<1.0 bio/cal yr)' : 'Baseline rate',
+      title: copy.pacePdf,
+      value: fill(copy.paceValue, { value: agingPace }),
+      sub: agingPace < 1.0 ? copy.slowedPdf : copy.baselineRate,
       color: [0, 97, 148],
     },
     {
-      title: 'AVG ADVANTAGE',
-      value: `${Math.abs(avgDelta).toFixed(1)} yrs`,
-      sub: `Across ${sortedHistory.length} test panels`,
+      title: copy.avgPdf,
+      value: fill(copy.yrs, { value: Math.abs(avgDelta).toFixed(1) }),
+      sub: fill(copy.acrossPdf, { count: sortedHistory.length }),
       color: [0, 105, 71],
     },
   ];
@@ -139,19 +146,23 @@ export function generateHistoricalReportPDF(history: HistoricalTestRecord[]): vo
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(11, 28, 48);
-  doc.text('HISTORICAL TEST PANELS & PHENOTYPIC AGE', margin, currentY);
+  doc.text(copy.panelsPdf, margin, currentY);
 
   currentY += 2;
 
   const panelRows = sortedHistory.map((item) => {
     const isDecel = item.delta <= 0;
-    const deltaStr = isDecel ? `${item.delta.toFixed(1)} yrs` : `+${item.delta.toFixed(1)} yrs`;
-    const statusStr = isDecel ? `Decelerated (-${Math.abs(item.delta).toFixed(1)}y)` : 'Accelerated';
+    const deltaStr = isDecel
+      ? fill(copy.yrs, { value: item.delta.toFixed(1) })
+      : fill(copy.plusYrs, { value: item.delta.toFixed(1) });
+    const statusStr = isDecel
+      ? fill(copy.deceleratedShort, { value: Math.abs(item.delta).toFixed(1) })
+      : copy.acceleratedShort;
     return [
       item.date,
       item.labSource,
-      `${item.chronologicalAge.toFixed(1)} yrs`,
-      `${item.phenoAge.toFixed(1)} yrs`,
+      fill(copy.yrs, { value: item.chronologicalAge.toFixed(1) }),
+      fill(copy.yrs, { value: item.phenoAge.toFixed(1) }),
       deltaStr,
       statusStr,
     ];
@@ -159,7 +170,7 @@ export function generateHistoricalReportPDF(history: HistoricalTestRecord[]): vo
 
   autoTable(doc, {
     startY: currentY,
-    head: [['Test Date', 'Lab Facility', 'Calendar Age', 'PhenoAge™', 'Variance (Δ)', 'Clinical Profile']],
+    head: [[copy.colDate, copy.colLab, copy.colCalendar, copy.colPhenoShort, copy.colVariance, copy.colProfile]],
     body: panelRows,
     theme: 'striped',
     styles: {
@@ -194,21 +205,21 @@ export function generateHistoricalReportPDF(history: HistoricalTestRecord[]): vo
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(11, 28, 48);
-  doc.text('BIOMARKER LONGITUDINAL MEASUREMENTS MATRIX', margin, currentY);
+  doc.text(copy.matrixPdf, margin, currentY);
 
   currentY += 2;
 
   // Header row for biomarkers: Biomarker Name, Domain, Optimal, then columns for each date
   const biomarkerHead = [
-    'Biomarker',
-    'Unit',
-    'Optimal Target',
+    copy.colBiomarker,
+    copy.colUnit,
+    copy.colOptimalPdf,
     ...sortedHistory.map((h) => h.date),
   ];
 
   const biomarkerBody = PHENOAGE_BIOMARKERS.map((bio) => {
     const row = [
-      bio.name,
+      isBiomarkerId(bio.id) ? messages.biomarkers[bio.id].name : bio.name,
       bio.unit,
       `${bio.optimalRange[0]} - ${bio.optimalRange[1]}`,
     ];
@@ -268,16 +279,19 @@ export function generateHistoricalReportPDF(history: HistoricalTestRecord[]): vo
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
   doc.setTextColor(0, 97, 148);
-  doc.text('CLINICAL LONGEVITY TRAJECTORY INTERPRETATION & METHODOLOGY', margin + 3, currentY + 6);
+  doc.text(copy.methodPdf, margin + 3, currentY + 6);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(51, 65, 85);
 
   const interpretationText = [
-    `• Rate of Aging: The calculated pace of aging is ${agingPace} biological years per chronological calendar year (${agingPace < 1.0 ? 'favorable deceleration' : 'normal/accelerated trajectory'}).`,
-    `• Primary Protective Biomarkers: Preservation of high serum albumin and low hs-CRP (<0.8 mg/L) correlate with reduced Gompertz 10-year all-cause mortality risk.`,
-    `• Mathematical Validation: PhenoAge utilizes Levine et al.'s parametric proportional hazards model trained on NHANES III/IV cohorts (N=9,926, p < 0.001) for all-cause and disease-specific mortality.`,
+    fill(copy.bulletPace, {
+      pace: agingPace,
+      tone: agingPace < 1.0 ? copy.paceFavorable : copy.paceNormal,
+    }),
+    copy.bulletMarkers,
+    copy.bulletMath,
   ];
 
   interpretationText.forEach((line, lIdx) => {
@@ -292,11 +306,11 @@ export function generateHistoricalReportPDF(history: HistoricalTestRecord[]): vo
     doc.setFontSize(7);
     doc.setTextColor(148, 163, 184);
     doc.text(
-      'PhenoAge™ Clinical Laboratory Longevity Telemetry • Confidential Medical Record • Reference: Levine et al., Aging 2018',
+      copy.footer,
       margin,
       pageHeight - 8
     );
-    doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
+    doc.text(fill(copy.page, { page: i, total: totalPages }), pageWidth - margin, pageHeight - 8, { align: 'right' });
   }
 
   // Save the PDF

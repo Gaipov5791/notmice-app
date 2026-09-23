@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { TabType } from '../types';
-import { ChevronDown, Shield, Terminal, Menu, X, Cpu, KeyRound } from 'lucide-react';
+import { ChevronDown, Shield, Terminal, Menu, X, KeyRound } from 'lucide-react';
 import logo from '../assets/images/logo.jpg';
+import { useI18n } from '../i18n/I18nProvider';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 interface HeaderProps {
   activeTab: TabType;
@@ -20,17 +22,18 @@ export const Header: React.FC<HeaderProps> = ({
   accountAddress,
   isAuthenticated,
 }) => {
+  const { m } = useI18n();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const desktopNavRef = useRef<HTMLElement>(null);
 
   const navItems: { id: TabType; label: string }[] = [
-    { id: 'overview-landing', label: 'Overview / Landing' },
-    { id: 'upload-lab', label: 'Upload Lab' },
-    { id: 'review-extraction', label: 'Review & Extraction' },
-    { id: 'phenoage-engine', label: 'PhenoAge™ Engine' },
-    { id: 'biomarker-history', label: 'Biomarker History' },
-    { id: 'data-sovereignty-public-sharing', label: 'Data Sovereignty & Public Sharing' },
+    { id: 'overview-landing', label: m.nav.overviewLanding },
+    { id: 'upload-lab', label: m.nav.uploadLab },
+    { id: 'review-extraction', label: m.nav.reviewExtraction },
+    { id: 'phenoage-engine', label: m.nav.phenoAgeEngine },
+    { id: 'biomarker-history', label: m.nav.biomarkerHistory },
+    { id: 'data-sovereignty-public-sharing', label: m.nav.dataSovereignty },
   ];
 
   const labItems = navItems.filter((item) => item.id === 'upload-lab' || item.id === 'review-extraction');
@@ -39,8 +42,8 @@ export const Header: React.FC<HeaderProps> = ({
   );
 
   const desktopGroups: { id: string; label: string; items: { id: TabType; label: string }[] }[] = [
-    { id: 'lab', label: 'Lab', items: labItems },
-    { id: 'phenoage', label: 'PhenoAge', items: phenoAgeItems },
+    { id: 'lab', label: m.nav.lab, items: labItems },
+    { id: 'phenoage', label: m.nav.phenoAge, items: phenoAgeItems },
   ];
 
   useEffect(() => {
@@ -88,7 +91,7 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <div className="relative">
               <img
-                alt="NotMice Research Protocol"
+                alt={m.nav.brandAlt}
                 className="w-12 h-12 rounded-full object-cover ring-2 ring-[#006194]/20 group-hover:ring-[#006194]/50 transition-all"
                 src={logo}
                 referrerPolicy="no-referrer"
@@ -105,7 +108,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               </div>
               <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74] hidden sm:inline-block">
-                Research Protocol
+                {m.nav.researchProtocol}
               </span>
             </div>
           </button>
@@ -122,7 +125,7 @@ export const Header: React.FC<HeaderProps> = ({
               data-path="overview-landing"
               className={linkClass(activeTab === 'overview-landing')}
             >
-              Overview
+              {m.nav.overview}
             </button>
 
             {desktopGroups.map((group) => {
@@ -178,7 +181,7 @@ export const Header: React.FC<HeaderProps> = ({
               data-path="data-sovereignty-public-sharing"
               className={linkClass(activeTab === 'data-sovereignty-public-sharing')}
             >
-              Data
+              {m.nav.data}
             </button>
           </nav>
 
@@ -187,7 +190,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Ephemeral in-memory key */}
           <button
             onClick={onOpenSeedPhrase}
-            title={isAuthenticated ? 'Account recovery phrase' : 'Sign in or create an account'}
+            title={isAuthenticated ? m.nav.accountRecovery : m.nav.signInOrCreate}
             className="hidden md:flex items-center gap-2 bg-[#eff4ff] hover:bg-[#e5eeff] px-2.5 py-1.5 rounded border border-[#dce9ff] transition-colors cursor-pointer"
           >
             <span className="w-2 h-2 rounded-full bg-[#00855b] animate-pulse"></span>
@@ -195,30 +198,32 @@ export const Header: React.FC<HeaderProps> = ({
               {accountAddress}
             </span>
             <span className="font-['JetBrains_Mono'] text-[11px] text-[#006947] font-semibold hidden lg:inline bg-[#4edea3]/20 px-1.5 py-0.5 rounded">
-              {isAuthenticated ? 'Signed in' : 'Guest'}
+              {isAuthenticated ? m.nav.signedIn : m.nav.guest}
             </span>
           </button>
 
           <div className="hidden sm:flex items-center gap-1.5 bg-[#eff4ff] text-[#3f4850] px-2.5 py-1.5 rounded font-['JetBrains_Mono'] text-[11px] border border-[#dce9ff]">
             <Shield className="w-3.5 h-3.5 text-[#006947]" />
-            <span className="font-medium">No raw files</span>
+            <span className="font-medium">{m.nav.noRawFiles}</span>
           </div>
 
           {/* Key generation modal toggle */}
           <button
             onClick={onOpenSeedPhrase}
-            aria-label="Account recovery phrase"
-            title="Account recovery phrase"
+            aria-label={m.nav.accountRecovery}
+            title={m.nav.accountRecovery}
             className="flex items-center gap-1 text-[#3f4850] hover:text-[#0b1c30] bg-[#eff4ff] hover:bg-[#e5eeff] p-2 rounded transition-colors border border-[#dce9ff] cursor-pointer"
           >
             <KeyRound className="w-4 h-4 text-[#006194]" />
           </button>
 
+          <LanguageSwitcher />
+
           {import.meta.env.DEV && (
             <button
               onClick={onOpenTerminal}
-              aria-label="Session log"
-              title="Session log"
+              aria-label={m.nav.sessionLog}
+              title={m.nav.sessionLog}
               className="flex items-center gap-1 text-[#3f4850] hover:text-[#0b1c30] bg-[#eff4ff] hover:bg-[#e5eeff] p-2 rounded transition-colors border border-[#dce9ff] cursor-pointer"
             >
               <Terminal className="w-4 h-4 text-[#3f4850]" />
@@ -229,7 +234,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="xl:hidden p-2 rounded text-[#3f4850] hover:bg-[#eff4ff] cursor-pointer"
-            aria-label="Toggle navigation menu"
+            aria-label={m.nav.toggleNav}
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -240,6 +245,9 @@ export const Header: React.FC<HeaderProps> = ({
       {mobileMenuOpen && (
         <div className="xl:hidden bg-[#ffffff] border-b border-[#e2e8f0] px-4 py-3 shadow-lg">
           <div className="flex flex-col gap-1">
+            <div className="flex justify-end pb-2">
+              <LanguageSwitcher />
+            </div>
             {navItems.map((item) => {
               const isActive = activeTab === item.id;
               return (
@@ -265,12 +273,12 @@ export const Header: React.FC<HeaderProps> = ({
                 setMobileMenuOpen(false);
                 onOpenSeedPhrase();
               }}
-              title={isAuthenticated ? 'Account recovery phrase' : 'Sign in or create an account'}
+              title={isAuthenticated ? m.nav.accountRecovery : m.nav.signInOrCreate}
               className="mt-2 border-t border-[#e2e8f0] flex w-full items-center justify-between px-3 py-2.5 text-left text-xs text-[#565e74] hover:bg-[#eff4ff] rounded cursor-pointer"
             >
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-[#00855b]"></span>
-                {isAuthenticated ? 'Signed in' : 'Guest'}
+                {isAuthenticated ? m.nav.signedIn : m.nav.guest}
               </span>
               <span className="font-mono">{accountAddress}</span>
             </button>

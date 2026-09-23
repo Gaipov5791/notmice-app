@@ -1,5 +1,7 @@
 import React from 'react';
 import { X, CheckCircle, ShieldCheck, Binary, Cpu, FileCheck } from 'lucide-react';
+import { fill } from '../i18n/fill';
+import { useI18n } from '../i18n/I18nProvider';
 
 interface ProofModalProps {
   isOpen: boolean;
@@ -17,6 +19,8 @@ export const ProofModal: React.FC<ProofModalProps> = ({
   phenoAge,
   chronologicalAge,
 }) => {
+  const { m } = useI18n();
+  const copy = m.modals;
   if (!isOpen) return null;
 
   return (
@@ -30,10 +34,10 @@ export const ProofModal: React.FC<ProofModalProps> = ({
             </div>
             <div>
               <h3 className="font-['Inter'] text-base font-bold text-[#0b1c30]">
-                PhenoAge research index
+                {copy.proofTitle}
               </h3>
               <p className="font-['JetBrains_Mono'] text-xs text-[#565e74]">
-                Levine et al., Aging 2018. Not a medical service.
+                {copy.proofSubtitle}
               </p>
             </div>
           </div>
@@ -52,27 +56,26 @@ export const ProofModal: React.FC<ProofModalProps> = ({
             <CheckCircle className="w-5 h-5 text-[#006947] shrink-0 mt-0.5" />
             <div className="text-sm">
               <span className="font-bold text-[#0b1c30] block">
-                Calculated from the numbers on this screen
+                {copy.proofBanner}
               </span>
               <span className="text-[#3f4850] text-xs leading-relaxed">
-                The score uses the Levine 2018 formula on the server. It is a research index, not a
-                diagnosis or a treatment recommendation.
+                {copy.proofBannerBody}
               </span>
             </div>
           </div>
 
           <div className="space-y-2">
             <label className="font-['Inter'] text-xs font-semibold text-[#0b1c30] uppercase tracking-wider block">
-              Method
+              {copy.method}
             </label>
             <div className="bg-[#f8f9ff] border border-[#e2e8f0] p-3 rounded font-['JetBrains_Mono'] text-xs space-y-2 text-[#3f4850]">
               <div className="flex justify-between items-center gap-4">
-                <span className="text-[#565e74]">Citation:</span>
-                <span className="text-[#0b1c30] text-right">Aging (Albany NY) 2018; 10(4):573–591</span>
+                <span className="text-[#565e74]">{copy.citation}</span>
+                <span className="text-[#0b1c30] text-right">{copy.citationValue}</span>
               </div>
               <div className="flex justify-between items-center gap-4">
-                <span className="text-[#565e74]">Inputs:</span>
-                <span className="text-[#0b1c30]">9 LOINC biomarkers and chronological age</span>
+                <span className="text-[#565e74]">{copy.inputs}</span>
+                <span className="text-[#0b1c30]">{copy.inputsValue}</span>
               </div>
             </div>
           </div>
@@ -80,31 +83,31 @@ export const ProofModal: React.FC<ProofModalProps> = ({
           {/* Provenance Tree */}
           <div className="space-y-2">
             <label className="font-['Inter'] text-xs font-semibold text-[#0b1c30] uppercase tracking-wider block">
-              Execution Trace Verification
+              {copy.trace}
             </label>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="p-3 bg-[#f8f9ff] rounded border border-[#e2e8f0]">
                 <div className="flex items-center gap-1.5 font-semibold text-[#0b1c30] mb-1">
                   <Binary className="w-4 h-4 text-[#006194]" />
-                  <span>Input Vector</span>
+                  <span>{copy.inputVector}</span>
                 </div>
                 <div className="text-[#565e74] space-y-0.5 font-mono text-[11px]">
-                  <p>Chronological: {chronologicalAge.toFixed(1)} yrs</p>
-                  <p>PhenoAge markers: 9</p>
-                  <p>Albumin: {biomarkers['albumin'] ?? 46.0} g/L</p>
-                  <p>hs-CRP: {biomarkers['crp'] ?? 0.8} mg/L</p>
+                  <p>{fill(copy.chronological, { value: chronologicalAge.toFixed(1) })}</p>
+                  <p>{copy.markerCount}</p>
+                  <p>{fill(copy.albuminLine, { value: biomarkers['albumin'] ?? 46.0 })}</p>
+                  <p>{fill(copy.crpLine, { value: biomarkers['crp'] ?? 0.8 })}</p>
                 </div>
               </div>
               <div className="p-3 bg-[#f8f9ff] rounded border border-[#e2e8f0]">
                 <div className="flex items-center gap-1.5 font-semibold text-[#0b1c30] mb-1">
                   <Cpu className="w-4 h-4 text-[#006947]" />
-                  <span>Computed Hazard</span>
+                  <span>{copy.computedHazard}</span>
                 </div>
                 <div className="text-[#565e74] space-y-0.5 font-mono text-[11px]">
-                  <p>Biological PhenoAge: {phenoAge.toFixed(1)} yrs</p>
-                  <p>Age difference: {(phenoAge - chronologicalAge).toFixed(1)} yrs</p>
-                  <p>Where: server, Levine 2018</p>
-                  <p>Use: research index only</p>
+                  <p>{fill(copy.biologicalLine, { value: phenoAge.toFixed(1) })}</p>
+                  <p>{fill(copy.differenceLine, { value: (phenoAge - chronologicalAge).toFixed(1) })}</p>
+                  <p>{copy.whereLine}</p>
+                  <p>{copy.useLine}</p>
                 </div>
               </div>
             </div>
@@ -113,7 +116,7 @@ export const ProofModal: React.FC<ProofModalProps> = ({
           <div className="bg-[#eff4ff] p-3 rounded text-xs text-[#3f4850] flex items-center gap-2">
             <FileCheck className="w-4 h-4 text-[#006194] shrink-0" />
             <span>
-              The nine PhenoAge markers use the versioned LOINC dictionary shipped with the API.
+              {copy.loincNote}
             </span>
           </div>
         </div>
@@ -124,7 +127,7 @@ export const ProofModal: React.FC<ProofModalProps> = ({
             onClick={onClose}
             className="px-4 py-1.5 rounded font-['Inter'] text-sm font-semibold bg-[#006194] text-[#ffffff] hover:bg-[#007bb9] transition-colors cursor-pointer"
           >
-            Close Inspector
+            {copy.closeInspector}
           </button>
         </div>
       </div>
