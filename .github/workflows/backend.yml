@@ -24,7 +24,9 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgresql+asyncpg://notmice:notmice@localhost:5432/notmice
-      SECRET_KEY: ci-test-secret-key-not-for-production
+      APP_ENV: development
+      SEED_HASH_SECRET: ci-seed-hash-secret-not-for-production
+      JWT_SECRET: ci-jwt-signing-secret-not-for-production
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

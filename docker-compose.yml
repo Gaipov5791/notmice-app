@@ -22,15 +22,18 @@ services:
       retries: 10
     restart: unless-stopped
 
+  # One API container. Rate limits and extract sessions live in this process; do not scale `api`.
   api:
     build:
       context: .
       dockerfile: Dockerfile
     environment:
+      APP_ENV: ${APP_ENV:-development}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-notmice}:${POSTGRES_PASSWORD:-notmice}@postgres:5432/${POSTGRES_DB:-notmice}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:8080}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      SECRET_KEY: ${SECRET_KEY:-dev-insecure-change-me-not-for-prod}
+      SEED_HASH_SECRET: ${SEED_HASH_SECRET:-dev-insecure-seed-hash-change-me-not-for-prod}
+      JWT_SECRET: ${JWT_SECRET:-dev-insecure-jwt-signing-change-me-not-for-prod}
       VISION_PROVIDER: ${VISION_PROVIDER:-gemini}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}

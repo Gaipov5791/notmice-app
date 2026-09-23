@@ -82,8 +82,8 @@ async def get_account_service(
     settings = get_settings()
     return AccountService(
         users=UserRepository(session),
-        hasher=Argon2SeedHasher(settings.secret_key),
-        tokens=JwtTokenIssuer(settings.secret_key, settings.access_token_ttl_seconds),
+        hasher=Argon2SeedHasher(settings.seed_hash_secret),
+        tokens=JwtTokenIssuer(settings.jwt_secret, settings.access_token_ttl_seconds),
     )
 
 

@@ -29,6 +29,47 @@ def test_reject_pii_blocks_patient_number_in_list() -> None:
         reject_pii([{"patient_number": "A-1"}])
 
 
+def test_reject_pii_blocks_email_inside_raw_name() -> None:
+    """An email written into a free-text analyte name is still personal data."""
+    with pytest.raises(PIIValidationError, match="email"):
+        reject_pii({"raw_name": "result for patient@example.com"})
+
+
+def test_reject_pii_blocks_phone_inside_raw_name() -> None:
+    """A phone number written into a free-text analyte name is rejected."""
+    with pytest.raises(PIIValidationError, match="phone"):
+        reject_pii({"raw_name": "call +7 999 123-45-67"})
+    with pytest.raises(PIIValidationError, match="phone"):
+        reject_pii({"raw_name": "+79991234567"})
+    with pytest.raises(PIIValidationError, match="phone"):
+        reject_pii({"lab_name": "8 (999) 123-45-67"})
+    with pytest.raises(PIIValidationError, match="phone"):
+        reject_pii({"raw_name": "415-555-2671"})
+
+
+def test_reject_pii_blocks_person_name_in_free_text() -> None:
+    """Two or three capitalized words in a free-text field are treated as a name."""
+    with pytest.raises(PIIValidationError, match="person name"):
+        reject_pii({"raw_name": "Ivan Petrov"})
+    with pytest.raises(PIIValidationError, match="person name"):
+        reject_pii({"lab_name": "Иван Петров"})
+    with pytest.raises(PIIValidationError, match="person name"):
+        reject_pii({"notes": "John Michael Smith"})
+
+
+def test_reject_pii_allows_dates_codes_and_extract_tokens() -> None:
+    """Dates, LOINC codes, and hyphenated tokens are not phone numbers."""
+    reject_pii(
+        {
+            "extract_token": "ab1234-5678-9012cdEF_xyz123456789012",
+            "loinc_code": "1751-7",
+            "collected_at": "1984-01-01",
+            "raw_name": "Vitamin D",
+            "notes": "Fasting Serum Glucose",
+        }
+    )
+
+
 def test_reject_sensitive_output_blocks_internal_ids() -> None:
     """Public responses cannot carry internal foreign keys or the document hash."""
     with pytest.raises(PIIValidationError, match="user_id"):

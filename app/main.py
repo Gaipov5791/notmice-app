@@ -13,7 +13,7 @@ from app.api.exports import router as exports_router
 from app.api.health import router as health_router
 from app.api.phenoage import router as phenoage_router
 from app.api.uploads import router as uploads_router
-from app.core.config import get_settings
+from app.core.config import get_settings, validate_runtime_secrets
 from app.core.deps import dispose_engine
 from app.core.logging import configure_logging
 
@@ -25,6 +25,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Configure logging on startup and dispose the database engine on shutdown."""
     settings = get_settings()
     configure_logging(settings.log_level)
+    validate_runtime_secrets(settings)
     logger.info("api_start")
     yield
     await dispose_engine()

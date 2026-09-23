@@ -4,6 +4,16 @@ from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Local and CI defaults. Production startup rejects this prefix and anything shorter than 32.
+_DEV_SEED_HASH_SECRET = "dev-insecure-seed-hash-change-me-not-for-prod"
+_DEV_JWT_SECRET = "dev-insecure-jwt-signing-change-me-not-for-prod"
+_INSECURE_SECRET_PREFIX = "dev-insecure"
+_MIN_PRODUCTION_SECRET_LENGTH = 32
+
+
+class InsecureSecretError(RuntimeError):
+    """Raised when seed-hash and JWT secrets are missing, shared, or unsafe to boot."""
+
 
 class Settings(BaseSettings):
     """Process settings. Unknown env keys are ignored so frontend secrets do not break boot."""
@@ -14,10 +24,12 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    app_env: str = "development"
     database_url: str = "postgresql+asyncpg://notmice:notmice@localhost:5432/notmice"
     cors_origins: str = "http://localhost:3000,http://localhost:8080"
     log_level: str = "INFO"
-    secret_key: str = "dev-insecure-change-me-not-for-prod"
+    seed_hash_secret: str = _DEV_SEED_HASH_SECRET
+    jwt_secret: str = _DEV_JWT_SECRET
     access_token_ttl_seconds: int = 43_200
     vision_provider: str = "gemini"
     gemini_api_key: str = ""
@@ -34,6 +46,38 @@ class Settings(BaseSettings):
     def cors_origin_list(self) -> list[str]:
         """Return CORS origins as a stripped list."""
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+
+def validate_runtime_secrets(settings: Settings) -> None:
+    """Refuse to boot when the seed pepper and JWT secret are missing or interchangeable.
+
+    Both values are always required and must differ. ``APP_ENV=production`` also rejects
+    an empty value, a value shorter than 32 characters, and any value that still uses the
+    ``dev-insecure`` prefix (including ``dev-insecure-change-me-not-for-prod``).
+    Local compose and CI stay on a non-production ``APP_ENV`` and may keep the dev defaults.
+
+    Args:
+        settings: Process settings already loaded from the environment.
+
+    Raises:
+        InsecureSecretError: If the secrets cannot be used for this environment.
+    """
+    seed = settings.seed_hash_secret
+    token = settings.jwt_secret
+    if not seed.strip() or not token.strip():
+        raise InsecureSecretError("SEED_HASH_SECRET and JWT_SECRET are required")
+    if seed == token:
+        raise InsecureSecretError("SEED_HASH_SECRET and JWT_SECRET must be different")
+    if settings.app_env.strip().casefold() != "production":
+        return
+    for name, value in (("SEED_HASH_SECRET", seed), ("JWT_SECRET", token)):
+        insecure_default = value.startswith(_INSECURE_SECRET_PREFIX) or (
+            value == "dev-insecure-change-me-not-for-prod"
+        )
+        if len(value) < _MIN_PRODUCTION_SECRET_LENGTH or insecure_default:
+            raise InsecureSecretError(
+                f"{name} must be at least 32 characters and must not use a dev-insecure default"
+            )
 
 
 @lru_cache(maxsize=1)
