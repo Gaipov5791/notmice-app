@@ -103,9 +103,6 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="font-['Inter'] text-[18px] text-[#0b1c30] tracking-tight font-bold">
                   NotMice
                 </span>
-                <span className="bg-[#e5eeff] text-[#3f4850] font-['JetBrains_Mono'] text-[11px] px-1.5 py-0.5 rounded font-medium">
-                  v1.4
-                </span>
               </div>
               <span className="font-['JetBrains_Mono'] text-[11px] text-[#565e74] hidden sm:inline-block">
                 {m.nav.researchProtocol}
