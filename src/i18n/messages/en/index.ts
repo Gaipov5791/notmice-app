@@ -1,5 +1,6 @@
 import { biomarkers } from './biomarkers';
 import { history } from './history';
+import { instructions } from './instructions';
 import { buildEnglishLifestyle } from './lifestyle';
 import { lifestyleUi } from './lifestyleUi';
 import { modals } from './modals';
@@ -20,6 +21,7 @@ export const enMessages = {
   review,
   phenoage,
   history,
+  instructions,
   sovereignty,
   modals,
   report,

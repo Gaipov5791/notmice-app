@@ -187,7 +187,7 @@ export const Header: React.FC<HeaderProps> = ({
                 aria-expanded={openMenu === 'documents'}
                 aria-haspopup="menu"
                 onClick={() => setOpenMenu(openMenu === 'documents' ? null : 'documents')}
-                className={`${linkClass(false)} inline-flex items-center gap-1`}
+                className={`${linkClass(activeTab === 'user-instructions')} inline-flex items-center gap-1`}
               >
                 {m.nav.documents}
                 <ChevronDown
@@ -202,8 +202,13 @@ export const Header: React.FC<HeaderProps> = ({
                   <button
                     type="button"
                     role="menuitem"
-                    onClick={() => setOpenMenu(null)}
-                    className="block w-full text-left px-3 py-2 text-[13px] font-medium cursor-pointer text-[#3f4850] hover:bg-[#eff4ff] hover:text-[#0b1c30]"
+                    data-path="user-instructions"
+                    onClick={() => selectTab('user-instructions')}
+                    className={`block w-full text-left px-3 py-2 text-[13px] font-medium cursor-pointer ${
+                      activeTab === 'user-instructions'
+                        ? 'bg-[#007bb9] text-[#ffffff]'
+                        : 'text-[#3f4850] hover:bg-[#eff4ff] hover:text-[#0b1c30]'
+                    }`}
                   >
                     {m.nav.userInstructions}
                   </button>
@@ -296,8 +301,15 @@ export const Header: React.FC<HeaderProps> = ({
             })}
             <button
               type="button"
-              onClick={() => setMobileMenuOpen(false)}
-              className="text-left px-3 py-2 rounded text-[14px] font-medium text-[#3f4850] hover:bg-[#eff4ff]"
+              onClick={() => {
+                setActiveTab('user-instructions');
+                setMobileMenuOpen(false);
+              }}
+              className={`text-left px-3 py-2 rounded text-[14px] font-medium ${
+                activeTab === 'user-instructions'
+                  ? 'bg-[#007bb9] text-[#ffffff]'
+                  : 'text-[#3f4850] hover:bg-[#eff4ff]'
+              }`}
             >
               {m.nav.userInstructions}
             </button>

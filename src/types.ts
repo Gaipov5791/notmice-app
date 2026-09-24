@@ -4,7 +4,8 @@ export type TabType =
   | 'review-extraction'
   | 'phenoage-engine'
   | 'biomarker-history'
-  | 'data-sovereignty-public-sharing';
+  | 'data-sovereignty-public-sharing'
+  | 'user-instructions';
 
 export interface BiomarkerDefinition {
   id: string;
