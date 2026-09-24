@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { TabType, LabPanelData } from '../../types';
+import { TabType, LabPanelData, TokenUsageNotice } from '../../types';
 import { INITIAL_BIOMARKERS, PHENOAGE_BIOMARKERS, PRESET_LAB_PANELS } from '../../data/phenoAgeData';
-import { extractLabFile } from '../../api/uploads';
+import { ExtractRequestError, extractLabFile } from '../../api/uploads';
+import { TokenUsageBanner } from '../TokenUsageBanner';
 import { fill } from '../../i18n/fill';
 import { getActiveI18n } from '../../i18n/catalog';
 import { useI18n } from '../../i18n/I18nProvider';
@@ -41,12 +42,14 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
   const [progressMsg, setProgressMsg] = useState('');
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [tokenNotice, setTokenNotice] = useState<TokenUsageNotice | null>(null);
 
   const loadPresetPanel = (
     fileName: string,
     presetKey: 'quest' | 'labcorp' | 'nhs' = 'quest'
   ) => {
     setUploadError(null);
+    setTokenNotice(null);
     setIsProcessing(true);
     setSelectedFileName(fileName);
     setProgressStep(5);
@@ -78,6 +81,7 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
       return;
     }
     setUploadError(null);
+    setTokenNotice(null);
     setIsProcessing(true);
     setSelectedFileName(file.name);
     setProgressStep(1);
@@ -86,6 +90,7 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
       setProgressStep(2);
       setProgressMsg(getActiveI18n().messages.upload.hashing);
       const extracted = await extractLabFile(accessToken, file);
+      setTokenNotice(extracted.tokenUsage);
       setProgressStep(5);
       setProgressMsg(getActiveI18n().messages.upload.ready);
 
@@ -116,11 +121,20 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
         extractToken: extracted.extractToken,
         parserVersion: extracted.parserVersion,
         extractedMarkers: extracted.markers,
+        tokenUsage: extracted.tokenUsage,
       };
       onLoadPanel(newPanel);
       setActiveTab('review-extraction');
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : getActiveI18n().messages.shell.extractionFailed);
+      if (err instanceof ExtractRequestError && err.usage) {
+        setTokenNotice(err.usage);
+        setUploadError(null);
+      } else {
+        setTokenNotice(null);
+        setUploadError(
+          err instanceof Error ? err.message : getActiveI18n().messages.shell.extractionFailed,
+        );
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -238,6 +252,8 @@ export const UploadLabTab: React.FC<UploadLabTabProps> = ({
               </span>
             </div>
           </div>
+
+          {tokenNotice && <TokenUsageBanner usage={tokenNotice} />}
 
           {uploadError && (
             <div className="bg-[#fff1f2] p-4 rounded-xl border border-[#fecdd3] text-xs text-[#9f1239] font-['Inter']">

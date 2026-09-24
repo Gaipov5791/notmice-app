@@ -34,6 +34,13 @@ class Settings(BaseSettings):
     vision_provider: str = "gemini"
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.8-flash"
+    gemini_daily_token_budget: int = 2_000_000
+    gemini_user_daily_token_budget: int = 100_000
+    gemini_ip_daily_token_budget: int = 150_000
+    gemini_call_token_reserve: int = 16_000
+    gemini_user_daily_calls: int = 8
+    gemini_ip_daily_calls: int = 12
+    gemini_budget_warn_ratio: float = 0.8
     claude_api_key: str = ""
     claude_model: str = "claude-sonnet-5"
     max_upload_bytes: int = 15_728_640

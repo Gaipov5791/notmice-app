@@ -93,6 +93,9 @@ class ExtractResponse(BaseModel):
     collected_at: date | None
     chronological_age: float | None
     markers: list[ExtractedMarkerView]
+    tokens_used: int = Field(ge=0)
+    tokens_limit: int = Field(ge=1)
+    warning: bool
 
 
 class ConfirmedMarkerInput(BaseModel):

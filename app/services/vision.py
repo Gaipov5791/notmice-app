@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, Protocol, cast
 
 import structlog
@@ -17,6 +18,7 @@ from app.domain.uploads import (
     VisionExtractionError,
     VisionNotConfiguredError,
 )
+from app.services.gemini_budget import GEMINI_MAX_ATTEMPTS
 
 logger = structlog.get_logger(__name__)
 
@@ -27,6 +29,97 @@ _EXTRACTION_INSTRUCTIONS = (
     "Units must stay as printed on the report. "
     "confidence is 0-1 for each marker."
 )
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderExtraction:
+    """Model output plus the billed token count for this call, including retries."""
+
+    extraction: RawLabExtraction
+    tokens_used: int | None
+
+
+class UsageTally:
+    """Sum token counts across retries. One unknown bill keeps the whole call unknown."""
+
+    def __init__(self) -> None:
+        self._total = 0
+        self._unknown = False
+
+    def add(self, tokens: int | None) -> None:
+        """Record one attempt.
+
+        Args:
+            tokens: Measured tokens, or ``None`` when the response had no usage metadata.
+        """
+        if tokens is None:
+            self._unknown = True
+            return
+        self._total += tokens
+
+    def tokens(self) -> int | None:
+        """Return the summed bill, or ``None`` when any attempt omitted usage."""
+        if self._unknown:
+            return None
+        return self._total
+
+
+def gemini_response_schema(model: type[RawLabExtraction]) -> dict[str, Any]:
+    """Return a JSON schema the Gemini Developer API will accept.
+
+    Pydantic includes ``additionalProperties`` because the models forbid extra
+    fields. That key is rejected on ``generateContent``.
+
+    Args:
+        model: Structured extraction model sent as ``response_schema``.
+    """
+    cleaned = _without_additional_properties(model.model_json_schema())
+    if not isinstance(cleaned, dict):
+        raise TypeError("Gemini response schema must be an object")
+    return cleaned
+
+
+def _without_additional_properties(node: object) -> object:
+    """Drop additionalProperties from a JSON schema tree."""
+    if isinstance(node, dict):
+        return {
+            key: _without_additional_properties(value)
+            for key, value in node.items()
+            if key not in {"additionalProperties", "additional_properties"}
+        }
+    if isinstance(node, list):
+        return [_without_additional_properties(item) for item in node]
+    return node
+
+
+def usage_token_count(metadata: object | None) -> int | None:
+    """Sum prompt, candidate, and thought tokens from a Gemini usage object.
+
+    Args:
+        metadata: ``usage_metadata`` from a generate_content response, or None.
+
+    Returns:
+        The summed count, ``total_token_count`` when the parts are absent, or
+        ``None`` when the response did not report a bill.
+    """
+    if metadata is None:
+        return None
+
+    def read(name: str) -> int | None:
+        if isinstance(metadata, dict):
+            value = metadata.get(name)
+        else:
+            value = getattr(metadata, name, None)
+        if value is None:
+            return None
+        return int(value)
+
+    prompt = read("prompt_token_count")
+    candidates = read("candidates_token_count")
+    thoughts = read("thoughts_token_count")
+    if prompt is None and candidates is None and thoughts is None:
+        return read("total_token_count")
+    return (prompt or 0) + (candidates or 0) + (thoughts or 0)
 
 
 class ExtractionProvider(Protocol):
@@ -40,10 +133,10 @@ class ExtractionProvider(Protocol):
     def model_id(self) -> str:
         """Model id used in parser_version."""
 
-    async def extract_from_text(self, text: str) -> RawLabExtraction:
+    async def extract_from_text(self, text: str) -> ProviderExtraction:
         """Structure already-extracted PDF text into markers."""
 
-    async def extract_from_media(self, payload: bytes, mime_type: str) -> RawLabExtraction:
+    async def extract_from_media(self, payload: bytes, mime_type: str) -> ProviderExtraction:
         """OCR a scan, photo, or image-only PDF from in-memory bytes."""
 
 
@@ -56,14 +149,14 @@ class ClaudeExtractionProvider:
         self._api_key = api_key
         self.model_id = model
 
-    async def extract_from_text(self, text: str) -> RawLabExtraction:
+    async def extract_from_text(self, text: str) -> ProviderExtraction:
         """Claude text structuring is not wired yet."""
         del text
         raise VisionNotConfiguredError(
             "Claude Vision is not implemented yet. Keep VISION_PROVIDER=gemini."
         )
 
-    async def extract_from_media(self, payload: bytes, mime_type: str) -> RawLabExtraction:
+    async def extract_from_media(self, payload: bytes, mime_type: str) -> ProviderExtraction:
         """Claude image/PDF vision is not wired yet."""
         del payload, mime_type
         raise VisionNotConfiguredError(
@@ -85,12 +178,12 @@ class GeminiExtractionProvider:
         if not self._api_key.strip():
             raise VisionNotConfiguredError("GEMINI_API_KEY is not set")
 
-    async def extract_from_text(self, text: str) -> RawLabExtraction:
+    async def extract_from_text(self, text: str) -> ProviderExtraction:
         """Send selectable PDF text to Gemini for structuring."""
         self._require_key()
         return await self._complete([_EXTRACTION_INSTRUCTIONS, text])
 
-    async def extract_from_media(self, payload: bytes, mime_type: str) -> RawLabExtraction:
+    async def extract_from_media(self, payload: bytes, mime_type: str) -> ProviderExtraction:
         """Send PDF or image bytes inline. The payload is not uploaded to Files API."""
         self._require_key()
         from google.genai import types
@@ -110,39 +203,68 @@ class GeminiExtractionProvider:
         self,
         contents: list[object],
         media_resolution: object | None = None,
-    ) -> RawLabExtraction:
+    ) -> ProviderExtraction:
         """Call Gemini with retries and parse a RawLabExtraction.
 
         Args:
             contents: Prompt plus optional inline media part.
             media_resolution: Optional Gemini media_resolution enum value.
         """
+        tally = UsageTally()
+        try:
+            panel = await self._retry(contents, media_resolution, tally)
+        except VisionNotConfiguredError:
+            raise
+        except VisionExtractionError as exc:
+            raise VisionExtractionError(
+                "Gemini extraction failed",
+                tokens_used=tally.tokens(),
+            ) from exc
+        return ProviderExtraction(extraction=panel, tokens_used=tally.tokens())
+
+    async def _retry(
+        self,
+        contents: list[object],
+        media_resolution: object | None,
+        tally: UsageTally,
+    ) -> RawLabExtraction:
+        """Retry a single extract and fold every attempt into ``tally``."""
         last_error: Exception | None = None
         async for attempt in AsyncRetrying(
-            stop=stop_after_attempt(3),
+            stop=stop_after_attempt(GEMINI_MAX_ATTEMPTS),
             wait=wait_exponential(multiplier=0.5, min=0.5, max=4),
             retry=retry_if_exception_type((VisionExtractionError, TimeoutError, ConnectionError)),
             reraise=True,
         ):
             with attempt:
                 try:
-                    return await self._once(contents, media_resolution)
+                    panel, tokens = await self._once(contents, media_resolution)
                 except VisionNotConfiguredError:
                     raise
-                except VisionExtractionError:
+                except VisionExtractionError as exc:
+                    tally.add(exc.tokens_used)
+                    last_error = exc
                     raise
                 except Exception as exc:
                     last_error = exc
                     logger.warning("gemini_extract_retry", error=str(exc))
-                    raise VisionExtractionError("Gemini extraction failed") from exc
-        raise VisionExtractionError("Gemini extraction failed") from last_error
+                    raise VisionExtractionError(
+                        "Gemini extraction failed",
+                        tokens_used=0,
+                    ) from exc
+                tally.add(tokens)
+                return panel
+        raise VisionExtractionError(
+            "Gemini extraction failed",
+            tokens_used=tally.tokens(),
+        ) from last_error
 
     async def _once(
         self,
         contents: list[object],
         media_resolution: object | None,
-    ) -> RawLabExtraction:
-        """Single Gemini generate_content call."""
+    ) -> tuple[RawLabExtraction, int | None]:
+        """Single Gemini generate_content call and its usage metadata."""
         from google import genai
         from google.genai import types
 
@@ -150,7 +272,7 @@ class GeminiExtractionProvider:
         config = types.GenerateContentConfig(
             temperature=0,
             response_mime_type="application/json",
-            response_schema=RawLabExtraction,
+            response_schema=gemini_response_schema(RawLabExtraction),
             thinking_config=types.ThinkingConfig(thinking_budget=0),
             media_resolution=cast(Any, media_resolution),
         )
@@ -159,15 +281,16 @@ class GeminiExtractionProvider:
             contents=cast(Any, contents),
             config=config,
         )
+        tokens = usage_token_count(getattr(response, "usage_metadata", None))
         parsed = response.parsed
         if isinstance(parsed, RawLabExtraction):
-            return parsed
+            return parsed, tokens
         if isinstance(parsed, dict):
-            return RawLabExtraction.model_validate(parsed)
+            return RawLabExtraction.model_validate(parsed), tokens
         text = response.text
         if text:
-            return RawLabExtraction.model_validate_json(text)
-        raise VisionExtractionError("Gemini returned an empty extraction")
+            return RawLabExtraction.model_validate_json(text), tokens
+        raise VisionExtractionError("Gemini returned an empty extraction", tokens_used=tokens)
 
 
 def build_extraction_provider(

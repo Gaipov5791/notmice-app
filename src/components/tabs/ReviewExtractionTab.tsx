@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { TabType, LabPanelData } from '../../types';
 import { PHENOAGE_BIOMARKERS } from '../../data/phenoAgeData';
 import { confirmLabExtraction } from '../../api/uploads';
+import { TokenUsageBanner } from '../TokenUsageBanner';
 import { isBiomarkerId } from '../../i18n/biomarkerIds';
 import { fill } from '../../i18n/fill';
 import { getActiveI18n } from '../../i18n/catalog';
@@ -137,6 +138,11 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
             <p className="font-['Inter'] text-xs text-[#565e74] mt-2">
               {copy.demoNote}
             </p>
+          )}
+          {currentPanel.tokenUsage && (
+            <div className="mt-3">
+              <TokenUsageBanner usage={currentPanel.tokenUsage} />
+            </div>
           )}
           {confirmError && (
             <p className="font-['Inter'] text-xs text-[#9f1239] mt-2">{confirmError}</p>

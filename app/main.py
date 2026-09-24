@@ -12,10 +12,12 @@ from app.api.dataset import router as dataset_router
 from app.api.exports import router as exports_router
 from app.api.health import router as health_router
 from app.api.phenoage import router as phenoage_router
+from app.api.uploads import gemini_budget_exhausted_handler
 from app.api.uploads import router as uploads_router
 from app.core.config import get_settings, validate_runtime_secrets
 from app.core.deps import dispose_engine
 from app.core.logging import configure_logging
+from app.domain.uploads import GeminiBudgetExhaustedError
 
 logger = structlog.get_logger(__name__)
 
@@ -53,6 +55,10 @@ def create_app() -> FastAPI:
         allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
+    )
+    application.add_exception_handler(
+        GeminiBudgetExhaustedError,
+        gemini_budget_exhausted_handler,
     )
     application.include_router(health_router)
     application.include_router(accounts_router)

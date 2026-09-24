@@ -1,6 +1,6 @@
 /** Lab extract/confirm API client. Maps snake_case payloads to camelCase for the UI. */
 
-import type { ExtractedMarker } from '../types';
+import type { ExtractedMarker, TokenUsageNotice } from '../types';
 
 export interface ExtractResult {
   extractToken: string;
@@ -10,6 +10,17 @@ export interface ExtractResult {
   collectedAt: string | null;
   chronologicalAge: number | null;
   markers: ExtractedMarker[];
+  tokenUsage: TokenUsageNotice;
+}
+
+export class ExtractRequestError extends Error {
+  readonly usage: TokenUsageNotice | null;
+
+  constructor(message: string, usage: TokenUsageNotice | null) {
+    super(message);
+    this.name = 'ExtractRequestError';
+    this.usage = usage;
+  }
 }
 
 export interface ConfirmResult {
@@ -39,6 +50,9 @@ interface ExtractPayload {
   collected_at: string | null;
   chronological_age: number | null;
   markers: ExtractedMarkerPayload[];
+  tokens_used: number;
+  tokens_limit: number;
+  warning: boolean;
 }
 
 interface ConfirmPayload {
@@ -52,6 +66,33 @@ interface ConfirmPayload {
 function apiUrl(path: string): string {
   const base = import.meta.env.VITE_API_BASE_URL ?? '';
   return `${base}${path}`;
+}
+
+function readTokenUsage(record: Record<string, unknown>, limitReached: boolean): TokenUsageNotice | null {
+  if (typeof record.tokens_used !== 'number' || typeof record.tokens_limit !== 'number') {
+    return null;
+  }
+  return {
+    tokensUsed: record.tokens_used,
+    tokensLimit: record.tokens_limit,
+    warning: limitReached || record.warning === true,
+    limitReached,
+  };
+}
+
+async function readExtractFailure(response: Response): Promise<ExtractRequestError> {
+  try {
+    const body: unknown = await response.json();
+    if (body && typeof body === 'object') {
+      const record = body as Record<string, unknown>;
+      const detail =
+        typeof record.detail === 'string' ? record.detail : `Request failed (${response.status})`;
+      return new ExtractRequestError(detail, readTokenUsage(record, response.status === 429));
+    }
+  } catch {
+    // Fall through to status text.
+  }
+  return new ExtractRequestError(`Request failed (${response.status})`, null);
 }
 
 async function readError(response: Response): Promise<string> {
@@ -91,7 +132,7 @@ export async function extractLabFile(token: string, file: File): Promise<Extract
     body,
   });
   if (!response.ok) {
-    throw new Error(await readError(response));
+    throw await readExtractFailure(response);
   }
   const payload = (await response.json()) as ExtractPayload;
   return {
@@ -102,6 +143,11 @@ export async function extractLabFile(token: string, file: File): Promise<Extract
     collectedAt: payload.collected_at,
     chronologicalAge: payload.chronological_age,
     markers: payload.markers.map(mapMarker),
+    tokenUsage: {
+      tokensUsed: payload.tokens_used,
+      tokensLimit: payload.tokens_limit,
+      warning: payload.warning,
+    },
   };
 }
 

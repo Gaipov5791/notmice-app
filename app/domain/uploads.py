@@ -39,6 +39,10 @@ class VisionNotConfiguredError(UploadError):
 class VisionExtractionError(UploadError):
     """The Vision provider failed after retries."""
 
+    def __init__(self, message: str, *, tokens_used: int | None = 0) -> None:
+        super().__init__(message)
+        self.tokens_used = tokens_used
+
 
 class ExtractSessionNotFoundError(UploadError):
     """The extract token is missing, expired, or belongs to another user."""
@@ -46,6 +50,15 @@ class ExtractSessionNotFoundError(UploadError):
 
 class NoMarkersError(UploadError):
     """Extraction produced no numeric analytes."""
+
+
+class GeminiBudgetExhaustedError(UploadError):
+    """The daily Gemini token or call budget cannot cover this extract."""
+
+    def __init__(self, *, tokens_used: int, tokens_limit: int) -> None:
+        super().__init__("Daily extraction limit reached")
+        self.tokens_used = tokens_used
+        self.tokens_limit = tokens_limit
 
 
 class RawMarker(BaseModel):
@@ -104,6 +117,16 @@ class ExtractSession:
     user_id: UUID
     panel: ExtractedPanel
     created_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class CompletedExtract:
+    """Extract session plus the caller's personal Gemini counter."""
+
+    session: ExtractSession
+    tokens_used: int
+    tokens_limit: int
+    warning: bool
 
 
 @dataclass(frozen=True, slots=True)

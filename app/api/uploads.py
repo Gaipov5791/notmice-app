@@ -5,10 +5,13 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi.responses import JSONResponse
 
 from app.api.accounts import get_current_user
+from app.core.config import get_settings
 from app.core.deps import get_upload_service
+from app.core.rate_limit import resolve_client_key
 from app.domain.accounts import UserRecord
 from app.domain.pii import PIIValidationError, reject_pii
 from app.domain.schemas import (
@@ -20,6 +23,7 @@ from app.domain.schemas import (
 from app.domain.uploads import (
     EmptyPayloadError,
     ExtractSessionNotFoundError,
+    GeminiBudgetExhaustedError,
     NoMarkersError,
     PayloadTooLargeError,
     RawMarker,
@@ -31,6 +35,21 @@ from app.domain.uploads import (
 from app.services.uploads import UploadService
 
 router = APIRouter(prefix="/api/v1/uploads", tags=["uploads"])
+
+
+async def gemini_budget_exhausted_handler(_request: Request, exc: Exception) -> JSONResponse:
+    """Return the caller's own counter when a Gemini budget refuses the extract."""
+    tokens_used = exc.tokens_used if isinstance(exc, GeminiBudgetExhaustedError) else 0
+    tokens_limit = exc.tokens_limit if isinstance(exc, GeminiBudgetExhaustedError) else 1
+    return JSONResponse(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        content={
+            "detail": "Daily extraction limit reached",
+            "tokens_used": tokens_used,
+            "tokens_limit": tokens_limit,
+            "warning": True,
+        },
+    )
 
 
 def _http_for(exc: UploadError) -> HTTPException:
@@ -69,18 +88,28 @@ def _http_for(exc: UploadError) -> HTTPException:
 
 @router.post("/extract", response_model=ExtractResponse)
 async def extract_upload(
+    request: Request,
     current: Annotated[UserRecord, Depends(get_current_user)],
     upload_service: Annotated[UploadService, Depends(get_upload_service)],
     file: Annotated[UploadFile, File()],
 ) -> ExtractResponse:
     """Parse a PDF or image in RAM and return markers for human review."""
+    settings = get_settings()
+    client_key = resolve_client_key(
+        real_ip=request.headers.get("x-real-ip"),
+        client_host=request.client.host if request.client is not None else None,
+        trust_proxy=settings.trust_proxy_headers,
+    )
     payload = await file.read()
     try:
-        session = await upload_service.extract(current.id, payload)
+        completed = await upload_service.extract(current.id, payload, client_key=client_key)
+    except GeminiBudgetExhaustedError:
+        raise
     except UploadError as exc:
         raise _http_for(exc) from exc
     finally:
         del payload
+    session = completed.session
     panel = session.panel
     chronological_age = (
         float(panel.chronological_age) if panel.chronological_age is not None else None
@@ -105,6 +134,9 @@ async def extract_upload(
             )
             for marker in panel.markers
         ],
+        tokens_used=completed.tokens_used,
+        tokens_limit=completed.tokens_limit,
+        warning=completed.warning,
     )
 
 

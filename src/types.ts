@@ -33,6 +33,13 @@ export interface BiomarkerValue {
   verified: boolean;
 }
 
+export interface TokenUsageNotice {
+  tokensUsed: number;
+  tokensLimit: number;
+  warning: boolean;
+  limitReached?: boolean;
+}
+
 export interface LabPanelData {
   id: string;
   labName: string;
@@ -48,6 +55,7 @@ export interface LabPanelData {
   extractToken?: string;
   parserVersion?: string;
   extractedMarkers?: ExtractedMarker[];
+  tokenUsage?: TokenUsageNotice;
 }
 
 export interface ExtractedMarker {

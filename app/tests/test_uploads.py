@@ -17,6 +17,7 @@ from app.domain.enums import MappingStatus
 from app.domain.uploads import (
     ConfirmedLabResult,
     ExtractSessionNotFoundError,
+    GeminiBudgetExhaustedError,
     MappedMarker,
     RawLabExtraction,
     RawMarker,
@@ -26,10 +27,15 @@ from app.domain.uploads import (
 from app.main import create_app
 from app.services.accounts import AccountService
 from app.services.extract_sessions import InMemoryExtractSessionStore
+from app.services.gemini_budget import GeminiTokenBudget
 from app.services.loinc_dictionary import load_loinc_dictionary
 from app.services.media import sha256_hex
 from app.services.uploads import UploadService
-from app.services.vision import ClaudeExtractionProvider, build_extraction_provider
+from app.services.vision import (
+    ClaudeExtractionProvider,
+    ProviderExtraction,
+    build_extraction_provider,
+)
 from app.tests.test_accounts import InMemoryUserStore
 
 
@@ -84,23 +90,24 @@ class FakeVision:
     name = "gemini"
     model_id = "fake-flash"
 
-    def __init__(self) -> None:
+    def __init__(self, tokens_used: int | None = 100) -> None:
         self.text_calls = 0
         self.media_calls = 0
+        self.tokens_used = tokens_used
         self.last_text: str | None = None
         self.last_media_mime: str | None = None
         self.last_media_size: int | None = None
 
-    async def extract_from_text(self, text: str) -> RawLabExtraction:
+    async def extract_from_text(self, text: str) -> ProviderExtraction:
         self.text_calls += 1
         self.last_text = text
-        return _albumin_extraction()
+        return ProviderExtraction(extraction=_albumin_extraction(), tokens_used=self.tokens_used)
 
-    async def extract_from_media(self, payload: bytes, mime_type: str) -> RawLabExtraction:
+    async def extract_from_media(self, payload: bytes, mime_type: str) -> ProviderExtraction:
         self.media_calls += 1
         self.last_media_mime = mime_type
         self.last_media_size = len(payload)
-        return _albumin_extraction()
+        return ProviderExtraction(extraction=_albumin_extraction(), tokens_used=self.tokens_used)
 
 
 class InMemoryLabStore:
@@ -143,6 +150,18 @@ def _account_service() -> AccountService:
     )
 
 
+def _budget() -> GeminiTokenBudget:
+    return GeminiTokenBudget(
+        daily_token_budget=2_000_000,
+        user_daily_token_budget=100_000,
+        ip_daily_token_budget=150_000,
+        call_token_reserve=16_000,
+        user_daily_calls=8,
+        ip_daily_calls=12,
+        warn_ratio=0.8,
+    )
+
+
 def _upload_bundle() -> tuple[UploadService, FakeVision, InMemoryLabStore]:
     vision = FakeVision()
     labs = InMemoryLabStore()
@@ -151,6 +170,7 @@ def _upload_bundle() -> tuple[UploadService, FakeVision, InMemoryLabStore]:
         sessions=InMemoryExtractSessionStore(ttl_seconds=60),
         lab_results=labs,
         max_upload_bytes=1_000_000,
+        budget=_budget(),
     )
     return service, vision, labs
 
@@ -214,7 +234,7 @@ async def test_text_pdf_uses_pdfplumber_path_and_drops_bytes() -> None:
         "Serum Albumin 46.2 g/L  Creatinine 0.88 mg/dL  Glucose 84 mg/dL extra padding text"
     )
     digest = sha256_hex(payload)
-    session = await service.extract(user.id, payload)
+    session = (await service.extract(user.id, payload, client_key="203.0.113.10")).session
     assert vision.text_calls == 1
     assert vision.media_calls == 0
     assert session.panel.document_sha256 == digest
@@ -228,7 +248,7 @@ async def test_image_uses_vision_media_path() -> None:
     service, vision, _labs = _upload_bundle()
     user = UserRecord(id=uuid4(), public_id="nmtest", is_public=False, created_at=datetime.now(UTC))
     jpeg = b"\xff\xd8\xff\xe0" + b"\x00" * 64
-    session = await service.extract(user.id, jpeg)
+    session = (await service.extract(user.id, jpeg, client_key="203.0.113.10")).session
     assert vision.media_calls == 1
     assert vision.text_calls == 0
     assert vision.last_media_mime == "image/jpeg"
@@ -240,7 +260,8 @@ async def test_confirm_keeps_unmapped_marker() -> None:
     """An unknown analyte is stored with the panel instead of being dropped."""
     service, _vision, labs = _upload_bundle()
     user = UserRecord(id=uuid4(), public_id="nmtest", is_public=False, created_at=datetime.now(UTC))
-    session = await service.extract(user.id, b"\xff\xd8\xff\xe0" + b"\x33" * 32)
+    jpeg = b"\xff\xd8\xff\xe0" + b"\x33" * 32
+    session = (await service.extract(user.id, jpeg, client_key="203.0.113.10")).session
     await service.confirm(
         user.id,
         session.token,
@@ -266,7 +287,7 @@ async def test_confirm_persists_session_hash_and_forgets_token() -> None:
     service, _vision, labs = _upload_bundle()
     user = UserRecord(id=uuid4(), public_id="nmtest", is_public=False, created_at=datetime.now(UTC))
     payload = b"\xff\xd8\xff\xe0" + b"\x11" * 32
-    session = await service.extract(user.id, payload)
+    session = (await service.extract(user.id, payload, client_key="203.0.113.10")).session
     result = await service.confirm(
         user.id,
         session.token,
@@ -322,6 +343,9 @@ async def test_extract_confirm_http_flow() -> None:
         body = extracted.json()
         assert body["document_sha256"] == sha256_hex(jpeg)
         assert body["parser_version"].startswith("notmice-extract/1.0/gemini/")
+        assert body["tokens_used"] == 100
+        assert body["tokens_limit"] == 100_000
+        assert body["warning"] is False
         assert "file" not in body
         albumin = next(item for item in body["markers"] if item["canonical_id"] == "albumin")
         assert albumin["loinc_code"] == "1751-7"
@@ -367,3 +391,71 @@ async def test_extract_rejects_unsupported_type() -> None:
             files={"file": ("notes.txt", b"hello world this is not a pdf", "text/plain")},
         )
     assert response.status_code == 415
+
+
+@pytest.mark.asyncio
+async def test_extract_stops_before_gemini_when_budget_is_exhausted() -> None:
+    """A full global budget refuses the extract without calling the provider."""
+    vision = FakeVision()
+    labs = InMemoryLabStore()
+    service = UploadService(
+        vision=vision,
+        sessions=InMemoryExtractSessionStore(ttl_seconds=60),
+        lab_results=labs,
+        max_upload_bytes=1_000_000,
+        budget=GeminiTokenBudget(
+            daily_token_budget=10,
+            user_daily_token_budget=100_000,
+            ip_daily_token_budget=150_000,
+            call_token_reserve=16_000,
+            user_daily_calls=8,
+            ip_daily_calls=12,
+            warn_ratio=0.8,
+        ),
+    )
+    user = UserRecord(id=uuid4(), public_id="nmtest", is_public=False, created_at=datetime.now(UTC))
+    jpeg = b"\xff\xd8\xff\xe0" + b"\x00" * 32
+    with pytest.raises(GeminiBudgetExhaustedError):
+        await service.extract(user.id, jpeg, client_key="203.0.113.20")
+    assert vision.media_calls == 0
+    assert vision.text_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_extract_http_budget_is_429_without_global_figures() -> None:
+    """The refusal names the daily limit and returns only the caller's counter."""
+    accounts = _account_service()
+    vision = FakeVision()
+    service = UploadService(
+        vision=vision,
+        sessions=InMemoryExtractSessionStore(ttl_seconds=60),
+        lab_results=InMemoryLabStore(),
+        max_upload_bytes=1_000_000,
+        budget=GeminiTokenBudget(
+            daily_token_budget=10,
+            user_daily_token_budget=100_000,
+            ip_daily_token_budget=150_000,
+            call_token_reserve=16_000,
+            user_daily_calls=8,
+            ip_daily_calls=12,
+            warn_ratio=0.8,
+        ),
+    )
+    application = _app(accounts, service)
+    transport = ASGITransport(app=application)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        created = await client.post("/api/v1/accounts", json={})
+        token = created.json()["access_token"]
+        response = await client.post(
+            "/api/v1/uploads/extract",
+            headers={"Authorization": f"Bearer {token}"},
+            files={"file": ("panel.jpg", b"\xff\xd8\xff\xe0" + b"\x22" * 16, "image/jpeg")},
+        )
+    assert response.status_code == 429
+    body = response.json()
+    assert body["detail"] == "Daily extraction limit reached"
+    assert body["tokens_used"] == 0
+    assert body["tokens_limit"] == 100_000
+    assert body["warning"] is True
+    assert set(body) == {"detail", "tokens_used", "tokens_limit", "warning"}
+    assert vision.media_calls == 0

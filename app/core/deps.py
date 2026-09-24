@@ -22,6 +22,7 @@ from app.services.accounts import AccountService
 from app.services.dataset import DatasetService
 from app.services.export import ExportService
 from app.services.extract_sessions import InMemoryExtractSessionStore
+from app.services.gemini_budget import GeminiTokenBudget
 from app.services.health import HealthService
 from app.services.uploads import UploadService
 from app.services.vision import ExtractionProvider, build_extraction_provider
@@ -31,6 +32,7 @@ _session_factory: async_sessionmaker[AsyncSession] | None = None
 _extract_sessions: InMemoryExtractSessionStore | None = None
 _vision_provider: ExtractionProvider | None = None
 _public_rate_limiter: SlidingWindowRateLimiter | None = None
+_gemini_budget: GeminiTokenBudget | None = None
 
 
 def get_engine() -> AsyncEngine:
@@ -110,6 +112,23 @@ def get_vision_provider() -> ExtractionProvider:
     return _vision_provider
 
 
+def get_gemini_budget() -> GeminiTokenBudget:
+    """Return the process-wide Gemini token ledger."""
+    global _gemini_budget
+    if _gemini_budget is None:
+        settings = get_settings()
+        _gemini_budget = GeminiTokenBudget(
+            daily_token_budget=settings.gemini_daily_token_budget,
+            user_daily_token_budget=settings.gemini_user_daily_token_budget,
+            ip_daily_token_budget=settings.gemini_ip_daily_token_budget,
+            call_token_reserve=settings.gemini_call_token_reserve,
+            user_daily_calls=settings.gemini_user_daily_calls,
+            ip_daily_calls=settings.gemini_ip_daily_calls,
+            warn_ratio=settings.gemini_budget_warn_ratio,
+        )
+    return _gemini_budget
+
+
 def get_public_rate_limiter() -> SlidingWindowRateLimiter:
     """Return the process-wide limiter for the public dataset routes."""
     global _public_rate_limiter
@@ -146,12 +165,14 @@ async def get_upload_service(
         sessions=get_extract_sessions(),
         lab_results=LabResultRepository(session),
         max_upload_bytes=settings.max_upload_bytes,
+        budget=get_gemini_budget(),
     )
 
 
 async def dispose_engine() -> None:
-    """Dispose the engine, RAM extract sessions, and the public rate limiter."""
+    """Dispose the engine, RAM extract sessions, rate limiter, and Gemini budget."""
     global _engine, _session_factory, _extract_sessions, _vision_provider, _public_rate_limiter
+    global _gemini_budget
     if _engine is not None:
         await _engine.dispose()
     _engine = None
@@ -161,3 +182,4 @@ async def dispose_engine() -> None:
     _extract_sessions = None
     _vision_provider = None
     _public_rate_limiter = None
+    _gemini_budget = None

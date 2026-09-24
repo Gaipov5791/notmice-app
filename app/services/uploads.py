@@ -12,20 +12,22 @@ import structlog
 from app.domain.enums import MappingStatus
 from app.domain.loinc import LoincDictionary
 from app.domain.uploads import (
+    CompletedExtract,
     ConfirmedLabResult,
     EmptyPayloadError,
     ExtractedPanel,
-    ExtractSession,
     MappedMarker,
     NoMarkersError,
     PayloadTooLargeError,
-    RawLabExtraction,
     RawMarker,
+    VisionExtractionError,
+    VisionNotConfiguredError,
     map_marker,
     parse_collected_at,
     parser_version_for,
 )
 from app.services.extract_sessions import InMemoryExtractSessionStore
+from app.services.gemini_budget import GeminiTokenBudget
 from app.services.loinc_dictionary import load_loinc_dictionary
 from app.services.media import sha256_hex, sniff_mime_type
 from app.services.pdf_text import extract_pdf_text, has_selectable_text
@@ -62,23 +64,29 @@ class UploadService:
         sessions: InMemoryExtractSessionStore,
         lab_results: LabResultStore,
         max_upload_bytes: int,
+        budget: GeminiTokenBudget,
         dictionary: LoincDictionary | None = None,
     ) -> None:
         self._vision = vision
         self._sessions = sessions
         self._lab_results = lab_results
         self._max_upload_bytes = max_upload_bytes
+        self._budget = budget
         self._dictionary = dictionary if dictionary is not None else load_loinc_dictionary()
 
-    async def extract(self, user_id: UUID, payload: bytes) -> ExtractSession:
+    async def extract(self, user_id: UUID, payload: bytes, *, client_key: str) -> CompletedExtract:
         """Hash, parse, and forget the original bytes.
 
         Args:
             user_id: Authenticated owner.
             payload: Complete file in RAM.
+            client_key: Address that owns the IP token bucket.
 
         Returns:
-            Extract session whose panel does not include file bytes.
+            Extract session whose panel does not include file bytes, plus personal usage.
+
+        Raises:
+            GeminiBudgetExhaustedError: The daily budget cannot cover another Gemini call.
         """
         if not payload:
             raise EmptyPayloadError
@@ -86,8 +94,26 @@ class UploadService:
             raise PayloadTooLargeError
         mime_type = sniff_mime_type(payload)
         digest = sha256_hex(payload)
-        raw = await self._parse(payload, mime_type)
-        del payload
+        text: str | None = None
+        if mime_type == "application/pdf" and has_selectable_text(payload):
+            text = extract_pdf_text(payload)
+        hold = self._budget.reserve(user_id, client_key)
+        try:
+            if text is not None:
+                parsed = await self._vision.extract_from_text(text)
+            else:
+                parsed = await self._vision.extract_from_media(payload, mime_type)
+        except VisionNotConfiguredError:
+            self._budget.release(hold)
+            raise
+        except VisionExtractionError as exc:
+            self._budget.commit(hold, exc.tokens_used)
+            raise
+        else:
+            usage = self._budget.commit(hold, parsed.tokens_used)
+        finally:
+            del payload
+        raw = parsed.extraction
         mapped = tuple(map_marker(item, self._dictionary) for item in raw.markers)
         if not mapped:
             raise NoMarkersError
@@ -116,7 +142,12 @@ class UploadService:
             mime_type=mime_type,
             parser_version=panel.parser_version,
         )
-        return session
+        return CompletedExtract(
+            session=session,
+            tokens_used=usage.tokens_used,
+            tokens_limit=usage.tokens_limit,
+            warning=usage.warning,
+        )
 
     async def confirm(
         self,
@@ -165,10 +196,3 @@ class UploadService:
             marker_count=result.marker_count,
         )
         return result
-
-    async def _parse(self, payload: bytes, mime_type: str) -> RawLabExtraction:
-        """Route text PDFs to pdfplumber+LLM; scans and photos to Vision."""
-        if mime_type == "application/pdf" and has_selectable_text(payload):
-            text = extract_pdf_text(payload)
-            return await self._vision.extract_from_text(text)
-        return await self._vision.extract_from_media(payload, mime_type)

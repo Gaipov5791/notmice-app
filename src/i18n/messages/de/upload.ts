@@ -42,4 +42,7 @@ export const upload = {
   uploading: 'Upload in den Server-RAM. Das Original wird nicht auf die Festplatte geschrieben...',
   hashing: 'SHA-256 wird berechnet und Marker werden extrahiert...',
   ready: 'Extraktion ist zur menschlichen Prüfung bereit.',
+  tokenUsage: 'Heute {used} von {limit} Tokens verbraucht.',
+  tokenUsageWarning: 'Heute {used} von {limit} Tokens verbraucht. Das Tageslimit ist fast erreicht.',
+  tokenLimitReached: 'Das Tageslimit für die Extraktion ist erreicht. Verbraucht: {used} von {limit} Tokens.',
 };
