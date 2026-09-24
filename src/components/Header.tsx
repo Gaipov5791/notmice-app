@@ -180,6 +180,36 @@ export const Header: React.FC<HeaderProps> = ({
             >
               {m.nav.data}
             </button>
+
+            <div className="relative">
+              <button
+                type="button"
+                aria-expanded={openMenu === 'documents'}
+                aria-haspopup="menu"
+                onClick={() => setOpenMenu(openMenu === 'documents' ? null : 'documents')}
+                className={`${linkClass(false)} inline-flex items-center gap-1`}
+              >
+                {m.nav.documents}
+                <ChevronDown
+                  className={`w-3.5 h-3.5 transition-transform ${openMenu === 'documents' ? 'rotate-180' : ''}`}
+                />
+              </button>
+              {openMenu === 'documents' && (
+                <div
+                  role="menu"
+                  className="absolute left-0 top-full mt-1 min-w-[220px] rounded-lg border border-[#e2e8f0] bg-[#ffffff] py-1 shadow-lg"
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => setOpenMenu(null)}
+                    className="block w-full text-left px-3 py-2 text-[13px] font-medium cursor-pointer text-[#3f4850] hover:bg-[#eff4ff] hover:text-[#0b1c30]"
+                  >
+                    {m.nav.userInstructions}
+                  </button>
+                </div>
+              )}
+            </div>
           </nav>
 
         {/* Right Status Controls */}
@@ -264,6 +294,13 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
               );
             })}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-left px-3 py-2 rounded text-[14px] font-medium text-[#3f4850] hover:bg-[#eff4ff]"
+            >
+              {m.nav.userInstructions}
+            </button>
             <button
               type="button"
               onClick={() => {

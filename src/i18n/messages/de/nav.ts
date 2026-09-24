@@ -9,6 +9,8 @@ export const nav = {
   biomarkerHistory: 'Biomarker-Verlauf',
   data: 'Daten',
   dataSovereignty: 'Datensouveränität und öffentliches Teilen',
+  documents: 'Dokumente',
+  userInstructions: 'Benutzeranleitung',
   researchProtocol: 'Forschungsprotokoll',
   brandAlt: 'NotMice-Forschungsprotokoll',
   accountRecovery: 'Wiederherstellungsphrase des Kontos',
