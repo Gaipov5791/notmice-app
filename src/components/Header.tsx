@@ -83,7 +83,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="fixed top-0 left-0 w-full z-50 bg-[#ffffff]/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] border-b border-[#e2e8f0]">
-      <div className="relative w-full max-w-[1440px] mx-auto px-4 lg:px-6 h-20 flex items-center justify-between gap-3 min-w-0">
+      <div className="relative w-full max-w-[1440px] mx-auto px-4 lg:px-6 h-20 flex items-center justify-between gap-4 xl:gap-6 min-w-0">
         <div className="flex items-center min-w-0">
           <button
             onClick={() => setActiveTab('overview-landing')}
@@ -114,7 +114,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           <nav
             ref={desktopNavRef}
-            className="hidden xl:flex items-center gap-1 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+            className="hidden xl:flex shrink-0 items-center gap-1"
             id="desktop-nav"
           >
             <button
