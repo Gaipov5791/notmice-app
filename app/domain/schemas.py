@@ -1,6 +1,7 @@
 """Pydantic schemas shared across API and services."""
 
 from datetime import date, datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -228,3 +229,28 @@ class TimeseriesResponse(BaseModel):
 
     public_id: str
     points: list[TimeseriesPointView]
+
+
+class NewsCardView(BaseModel):
+    """One research or commentary card. The snippet is the publisher's text, clipped."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    title: str
+    source: str
+    published_at: date | None
+    snippet: str
+    url: str
+    kind: Literal["paper", "biohacking"]
+
+
+class NewsResponse(BaseModel):
+    """Live feed assembled from PubMed and the RSS allowlist."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[NewsCardView]
+    fetched_at: datetime | None
+    stale: bool
+    error: Literal["unavailable"] | None

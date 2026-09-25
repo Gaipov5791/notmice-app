@@ -5,6 +5,7 @@ import { buildEnglishLifestyle } from './lifestyle';
 import { lifestyleUi } from './lifestyleUi';
 import { modals } from './modals';
 import { nav } from './nav';
+import { news } from './news';
 import { overview } from './overview';
 import { phenoage } from './phenoage';
 import { report } from './report';
@@ -15,6 +16,7 @@ import { upload } from './upload';
 
 export const enMessages = {
   nav,
+  news,
   shell,
   overview,
   upload,

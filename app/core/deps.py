@@ -24,6 +24,7 @@ from app.services.export import ExportService
 from app.services.extract_sessions import InMemoryExtractSessionStore
 from app.services.gemini_budget import GeminiTokenBudget
 from app.services.health import HealthService
+from app.services.news import HttpxTextFetcher, NewsMemoryCache, NewsService
 from app.services.uploads import UploadService
 from app.services.vision import ExtractionProvider, build_extraction_provider
 
@@ -32,6 +33,8 @@ _session_factory: async_sessionmaker[AsyncSession] | None = None
 _extract_sessions: InMemoryExtractSessionStore | None = None
 _vision_provider: ExtractionProvider | None = None
 _public_rate_limiter: SlidingWindowRateLimiter | None = None
+_news_rate_limiter: SlidingWindowRateLimiter | None = None
+_news_service: NewsService | None = None
 _gemini_budget: GeminiTokenBudget | None = None
 
 
@@ -129,6 +132,34 @@ def get_gemini_budget() -> GeminiTokenBudget:
     return _gemini_budget
 
 
+def get_news_service() -> NewsService:
+    """Return the process-wide news reader. External calls are cached in memory."""
+    global _news_service
+    if _news_service is None:
+        settings = get_settings()
+        _news_service = NewsService(
+            HttpxTextFetcher(),
+            NewsMemoryCache(settings.news_cache_ttl_seconds),
+            rss_feeds=settings.news_rss_feed_list,
+            pubmed_retmax=settings.news_pubmed_retmax,
+            snippet_max_chars=settings.news_snippet_max_chars,
+            email=settings.news_contact_email,
+        )
+    return _news_service
+
+
+def get_news_rate_limiter() -> SlidingWindowRateLimiter:
+    """Return the process-wide limiter for the news route."""
+    global _news_rate_limiter
+    if _news_rate_limiter is None:
+        settings = get_settings()
+        _news_rate_limiter = SlidingWindowRateLimiter(
+            limit=settings.news_rate_limit,
+            window_seconds=settings.news_rate_limit_window_seconds,
+        )
+    return _news_rate_limiter
+
+
 def get_public_rate_limiter() -> SlidingWindowRateLimiter:
     """Return the process-wide limiter for the public dataset routes."""
     global _public_rate_limiter
@@ -170,9 +201,9 @@ async def get_upload_service(
 
 
 async def dispose_engine() -> None:
-    """Dispose the engine, RAM extract sessions, rate limiter, and Gemini budget."""
+    """Dispose the engine, RAM extract sessions, rate limiters, news cache, and Gemini budget."""
     global _engine, _session_factory, _extract_sessions, _vision_provider, _public_rate_limiter
-    global _gemini_budget
+    global _gemini_budget, _news_service, _news_rate_limiter
     if _engine is not None:
         await _engine.dispose()
     _engine = None
@@ -182,4 +213,8 @@ async def dispose_engine() -> None:
     _extract_sessions = None
     _vision_provider = None
     _public_rate_limiter = None
+    _news_rate_limiter = None
+    if _news_service is not None:
+        _news_service.clear()
+    _news_service = None
     _gemini_budget = None

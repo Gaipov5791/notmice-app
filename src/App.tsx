@@ -21,6 +21,7 @@ import { ReviewExtractionTab } from './components/tabs/ReviewExtractionTab';
 import { PhenoAgeEngineTab } from './components/tabs/PhenoAgeEngineTab';
 import { BiomarkerHistoryTab } from './components/tabs/BiomarkerHistoryTab';
 import { DataSovereigntyTab } from './components/tabs/DataSovereigntyTab';
+import { ResearchNewsTab } from './components/tabs/ResearchNewsTab';
 import { UserInstructionsTab } from './components/tabs/UserInstructionsTab';
 import { ProofModal } from './components/ProofModal';
 import { SeedPhraseModal } from './components/SeedPhraseModal';
@@ -389,6 +390,8 @@ export default function App() {
             setActiveTab={setActiveTab}
           />
         )}
+
+        {activeTab === 'research-news' && <ResearchNewsTab biomarkers={biomarkers} />}
 
         {activeTab === 'user-instructions' && <UserInstructionsTab setActiveTab={setActiveTab} />}
       </main>

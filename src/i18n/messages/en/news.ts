@@ -1,0 +1,21 @@
+export const news = {
+  stage: 'Research feed',
+  stageMeta: 'PubMed and publisher RSS',
+  title: 'News',
+  lead: 'Recent longevity research and biohacking commentary. Titles and summaries stay in the language of the source.',
+  disclaimer:
+    'These cards point to publications. They are not a diagnosis, a treatment plan, or medical advice.',
+  filterAll: 'All',
+  filterPapers: 'Research',
+  filterBiohacking: 'Biohacking',
+  filterMine: 'My markers',
+  kindPaper: 'Research',
+  kindBiohacking: 'Biohacking',
+  openArticle: 'Open article',
+  loading: 'Loading the latest items…',
+  unavailable: 'The feeds could not be loaded. Try again in a little while.',
+  stale: 'Showing the last saved list. A source did not respond.',
+  emptyFeed: 'No recent items came back from the feeds.',
+  emptyFilter: 'Nothing in this list matches this filter.',
+  retry: 'Try again',
+};

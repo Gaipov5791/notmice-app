@@ -9,6 +9,7 @@ export const nav = {
   biomarkerHistory: 'Biomarker-Verlauf',
   data: 'Daten',
   dataSovereignty: 'Datensouveränität und öffentliches Teilen',
+  news: 'Nachrichten',
   documents: 'Dokumente',
   userInstructions: 'Benutzeranleitung',
   researchProtocol: 'Forschungsprotokoll',

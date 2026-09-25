@@ -11,6 +11,7 @@ from app.api.accounts import router as accounts_router
 from app.api.dataset import router as dataset_router
 from app.api.exports import router as exports_router
 from app.api.health import router as health_router
+from app.api.news import router as news_router
 from app.api.phenoage import router as phenoage_router
 from app.api.uploads import gemini_budget_exhausted_handler
 from app.api.uploads import router as uploads_router
@@ -61,6 +62,7 @@ def create_app() -> FastAPI:
         gemini_budget_exhausted_handler,
     )
     application.include_router(health_router)
+    application.include_router(news_router)
     application.include_router(accounts_router)
     application.include_router(uploads_router)
     application.include_router(phenoage_router)

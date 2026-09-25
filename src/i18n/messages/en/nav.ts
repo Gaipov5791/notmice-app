@@ -9,6 +9,7 @@ export const nav = {
   biomarkerHistory: 'Biomarker History',
   data: 'Data',
   dataSovereignty: 'Data Sovereignty & Public Sharing',
+  news: 'News',
   documents: 'Documents',
   userInstructions: 'User instructions',
   researchProtocol: 'Research Protocol',

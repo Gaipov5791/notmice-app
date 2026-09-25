@@ -1,0 +1,21 @@
+export const news = {
+  stage: 'Forschungslauf',
+  stageMeta: 'PubMed und Herausgeber-RSS',
+  title: 'Nachrichten',
+  lead: 'Aktuelle Langlebigkeitsforschung und Biohacking-Kommentare. Titel und Kurztexte bleiben in der Sprache der Quelle.',
+  disclaimer:
+    'Diese Karten verweisen auf Veröffentlichungen. Sie sind keine Diagnose, kein Behandlungsplan und kein medizinischer Rat.',
+  filterAll: 'Alle',
+  filterPapers: 'Forschung',
+  filterBiohacking: 'Biohacking',
+  filterMine: 'Meine Marker',
+  kindPaper: 'Forschung',
+  kindBiohacking: 'Biohacking',
+  openArticle: 'Artikel öffnen',
+  loading: 'Aktuelle Einträge werden geladen…',
+  unavailable: 'Die Quellen konnten nicht geladen werden. Versuchen Sie es etwas später erneut.',
+  stale: 'Die zuletzt gespeicherte Liste wird gezeigt. Eine Quelle hat nicht geantwortet.',
+  emptyFeed: 'Die Quellen haben keine aktuellen Einträge geliefert.',
+  emptyFilter: 'Nichts in dieser Liste passt zu diesem Filter.',
+  retry: 'Erneut versuchen',
+};

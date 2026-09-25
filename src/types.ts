@@ -5,6 +5,7 @@ export type TabType =
   | 'phenoage-engine'
   | 'biomarker-history'
   | 'data-sovereignty-public-sharing'
+  | 'research-news'
   | 'user-instructions';
 
 export interface BiomarkerDefinition {

@@ -34,6 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'phenoage-engine', label: m.nav.phenoAgeEngine },
     { id: 'biomarker-history', label: m.nav.biomarkerHistory },
     { id: 'data-sovereignty-public-sharing', label: m.nav.dataSovereignty },
+    { id: 'research-news', label: m.nav.news },
   ];
 
   const labItems = navItems.filter((item) => item.id === 'upload-lab' || item.id === 'review-extraction');
@@ -179,6 +180,15 @@ export const Header: React.FC<HeaderProps> = ({
               className={linkClass(activeTab === 'data-sovereignty-public-sharing')}
             >
               {m.nav.data}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => selectTab('research-news')}
+              data-path="research-news"
+              className={linkClass(activeTab === 'research-news')}
+            >
+              {m.nav.news}
             </button>
 
             <div className="relative">

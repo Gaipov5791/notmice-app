@@ -1,0 +1,201 @@
+import React, { useEffect, useState } from 'react';
+import { ExternalLink, Newspaper } from 'lucide-react';
+import { fetchNews, type NewsFeed, type NewsKind } from '../../api/news';
+import { useI18n } from '../../i18n/I18nProvider';
+import { cardMatchesPanel, markerTags } from '../../utils/newsMarkers';
+
+type NewsFilter = 'all' | NewsKind | 'mine';
+type LoadStatus = 'loading' | 'ready' | 'failed';
+
+interface ResearchNewsTabProps {
+  biomarkers: Record<string, number>;
+}
+
+function formatPublished(value: string | null, locale: string): string | null {
+  if (!value) {
+    return null;
+  }
+  const parsed = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(parsed);
+}
+
+export const ResearchNewsTab: React.FC<ResearchNewsTabProps> = ({ biomarkers }) => {
+  const { locale, m } = useI18n();
+  const copy = m.news;
+  const [feed, setFeed] = useState<NewsFeed | null>(null);
+  const [status, setStatus] = useState<LoadStatus>('loading');
+  const [filter, setFilter] = useState<NewsFilter>('all');
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setStatus('loading');
+    void fetchNews(controller.signal)
+      .then((next) => {
+        setFeed(next);
+        setStatus('ready');
+      })
+      .catch((err: unknown) => {
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          return;
+        }
+        setFeed(null);
+        setStatus('failed');
+      });
+    return () => controller.abort();
+  }, [reloadKey]);
+
+  const filters: { id: NewsFilter; label: string }[] = [
+    { id: 'all', label: copy.filterAll },
+    { id: 'paper', label: copy.filterPapers },
+    { id: 'biohacking', label: copy.filterBiohacking },
+    { id: 'mine', label: copy.filterMine },
+  ];
+
+  const decorated = (feed?.items ?? []).map((card) => ({
+    card,
+    tags: markerTags(card.title, card.snippet),
+  }));
+  const visible = decorated.filter(({ card, tags }) => {
+    if ((filter === 'paper' || filter === 'biohacking') && card.kind !== filter) {
+      return false;
+    }
+    if (filter === 'mine' && !cardMatchesPanel(tags, biomarkers)) {
+      return false;
+    }
+    return true;
+  });
+
+  const unavailable = status === 'failed' || feed?.error === 'unavailable';
+
+  return (
+    <div className="w-full max-w-[1440px] mx-auto px-4 lg:px-8 py-8 flex flex-col gap-6">
+      <div className="border-b border-[#e2e8f0] pb-6">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="bg-[#cce5ff] text-[#004b73] font-['JetBrains_Mono'] text-xs font-semibold px-2 py-0.5 rounded">
+            {copy.stage}
+          </span>
+          <span className="font-['JetBrains_Mono'] text-xs text-[#565e74]">{copy.stageMeta}</span>
+        </div>
+        <h1 className="font-['Inter'] text-2xl lg:text-3xl font-bold text-[#0b1c30]">{copy.title}</h1>
+        <p className="font-['Inter'] text-sm text-[#3f4850] mt-1 max-w-2xl">{copy.lead}</p>
+      </div>
+
+      <p className="font-['Inter'] text-sm text-[#3f4850] bg-[#eff4ff] border border-[#dce9ff] rounded-lg px-4 py-3">
+        {copy.disclaimer}
+      </p>
+
+      <div className="flex flex-wrap gap-2" role="group" aria-label={copy.title}>
+        {filters.map((item) => {
+          const selected = filter === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => setFilter(item.id)}
+              className={`font-['Inter'] text-[13px] font-medium px-3 py-1.5 rounded cursor-pointer ${
+                selected
+                  ? 'bg-[#007bb9] text-[#ffffff]'
+                  : 'bg-[#ffffff] text-[#3f4850] border border-[#e2e8f0] hover:bg-[#e5eeff]'
+              }`}
+            >
+              {item.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {feed?.stale && status === 'ready' && !unavailable && (
+        <p className="font-['Inter'] text-sm text-[#3f4850]">{copy.stale}</p>
+      )}
+
+      {status === 'loading' && (
+        <p className="font-['Inter'] text-sm text-[#565e74]">{copy.loading}</p>
+      )}
+
+      {unavailable && status !== 'loading' && (
+        <div className="bg-[#ffffff] border border-[#e2e8f0] rounded-lg p-5 flex flex-col items-start gap-3">
+          <p className="font-['Inter'] text-sm text-[#3f4850]">{copy.unavailable}</p>
+          <button
+            type="button"
+            onClick={() => setReloadKey((value) => value + 1)}
+            className="font-['Inter'] text-sm font-medium text-[#006194] hover:underline cursor-pointer"
+          >
+            {copy.retry}
+          </button>
+        </div>
+      )}
+
+      {status === 'ready' && !unavailable && visible.length === 0 && (
+        <p className="font-['Inter'] text-sm text-[#565e74]">
+          {feed && feed.items.length === 0 ? copy.emptyFeed : copy.emptyFilter}
+        </p>
+      )}
+
+      {status === 'ready' && !unavailable && visible.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          {visible.map(({ card, tags }) => {
+            const published = formatPublished(card.publishedAt, locale);
+            return (
+              <article
+                key={card.id}
+                className="bg-[#ffffff] border border-[#e2e8f0] rounded-lg p-4 flex flex-col gap-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center gap-1 font-['JetBrains_Mono'] text-[11px] uppercase tracking-wide text-[#004b73] bg-[#cce5ff] px-2 py-0.5 rounded">
+                    <Newspaper className="w-3 h-3" />
+                    {card.kind === 'paper' ? copy.kindPaper : copy.kindBiohacking}
+                  </span>
+                  {published && (
+                    <time className="font-['JetBrains_Mono'] text-[11px] text-[#565e74]" dateTime={card.publishedAt ?? undefined}>
+                      {published}
+                    </time>
+                  )}
+                </div>
+                <h2 className="font-['Inter'] text-base font-semibold text-[#0b1c30] leading-snug">
+                  {card.title}
+                </h2>
+                {card.snippet && (
+                  <p className="font-['Inter'] text-sm text-[#3f4850] leading-relaxed">{card.snippet}</p>
+                )}
+                {card.source && (
+                  <p className="font-['Inter'] text-xs text-[#565e74]">{card.source}</p>
+                )}
+                {tags.length > 0 && (
+                  <ul className="flex flex-wrap gap-1.5">
+                    {tags.map((id) => (
+                      <li
+                        key={id}
+                        className="font-['JetBrains_Mono'] text-[11px] text-[#006194] bg-[#eff4ff] border border-[#dce9ff] px-1.5 py-0.5 rounded"
+                      >
+                        {m.biomarkers[id].shortName}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <a
+                  href={card.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-auto inline-flex items-center gap-1 text-sm font-medium text-[#006194] hover:underline"
+                >
+                  {copy.openArticle}
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};

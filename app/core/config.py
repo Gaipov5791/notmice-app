@@ -47,12 +47,24 @@ class Settings(BaseSettings):
     extract_session_ttl_seconds: int = 1_800
     dataset_rate_limit: int = 60
     dataset_rate_limit_window_seconds: int = 60
+    news_rate_limit: int = 30
+    news_rate_limit_window_seconds: int = 60
+    news_cache_ttl_seconds: int = 3600
+    news_pubmed_retmax: int = 12
+    news_snippet_max_chars: int = 420
+    news_contact_email: str = ""
+    news_rss_feeds: str = "https://www.fightaging.org/feed/,https://www.lifespan.io/feed/"
     trust_proxy_headers: bool = True
 
     @property
     def cors_origin_list(self) -> list[str]:
         """Return CORS origins as a stripped list."""
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def news_rss_feed_list(self) -> list[str]:
+        """Return the publisher RSS allowlist. Empty entries are dropped."""
+        return [feed.strip() for feed in self.news_rss_feeds.split(",") if feed.strip()]
 
 
 def validate_runtime_secrets(settings: Settings) -> None:
