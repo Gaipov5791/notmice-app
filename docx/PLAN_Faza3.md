@@ -1,14 +1,14 @@
 # План по ТЗ фазы 3
 
-**Статус:** утверждён 22.09.2026. 23.09.2026 сделан код приоритета 1 (basic auth на `/docs`, терминал только в dev, обязательное сохранение seed-фразы) и код приоритета 2 (два секрета, fail-fast, PII по содержимому, npm). В тот же день Бакыт закрыл запасной канал восстановления: в этот заход не делаем. Хостинг, платный Gemini и набор пользователей ещё не сделаны.
+**Статус:** утверждён 22.09.2026. 23.09.2026 сделан код приоритета 1 (basic auth на `/docs`, терминал только в dev, обязательное сохранение seed-фразы) и код приоритета 2 (два секрета, fail-fast, PII по содержимому, npm). В тот же день Бакыт закрыл запасной канал восстановления: в этот заход не делаем. 26.09.2026 Vercel закрыт: сайт, API и Postgres на одном VPS. Боевой Compose в репозитории. Сам сервер, платный Gemini и набор пользователей ещё не сделаны.
 
 **Источник:** [NotMice_TZ_Faza3.md](NotMice_TZ_Faza3.md). Календарь из [PLAN.md](PLAN.md) всё ещё актуален по датам: гейт 05.10.2026, код-фриз 10.10.2026, подача SPRIND 16.10.2026. Сегодня 22.09 — в коде успеваем приоритеты 1 (кроме набора пользователей) и точечный приоритет 2. Приоритет 3 до фриза не трогаем.
 
-ТЗ фазы 3 сходится с кодом: Docker Compose, Gemini и черновой онбординг уже есть, но до питча SPRIND не закрыты раздельный хостинг, обязательное сохранение seed-фразы, публичные `/docs` и дебаг-терминал. План делит работу на код в репозитории, решения команды и то, что сознательно откладывается после гранта.
+ТЗ фазы 3: сайт, API и Postgres на одном VPS, без Vercel. В репозитории есть dev Compose и боевой Compose. До питча SPRIND не закрыты сам сервер, платный Gemini и живые opt-in записи. План делит работу на код в репозитории, решения команды и то, что сознательно откладывается после гранта.
 
 ## Что ТЗ описывает верно
 
-- Backend — FastAPI, сессии извлечения и rate limit живут в памяти процесса ([app/core/rate_limit.py](../app/core/rate_limit.py), [app/core/deps.py](../app/core/deps.py)). Postgres поднимается только в [docker-compose.yml](../docker-compose.yml). Отдельного прод-хоста в репозитории нет. Фронт ходит в API через `VITE_API_BASE_URL` ([src/api/accounts.ts](../src/api/accounts.ts) и соседние клиенты).
+- Backend — FastAPI, сессии извлечения и rate limit живут в памяти процесса ([app/core/rate_limit.py](../app/core/rate_limit.py), [app/core/deps.py](../app/core/deps.py)). Postgres поднимается в [docker-compose.yml](../docker-compose.yml) и в [docker-compose.prod.yml](../docker-compose.prod.yml). Боевой файл собирает фронт и отдаёт его тем же nginx, что проксирует API. `VITE_API_BASE_URL` пустой: сайт и API на одном origin ([src/api/accounts.ts](../src/api/accounts.ts) и соседние клиенты). Отдельного хоста под фронт нет.
 - `Argon2SeedHasher` и `JwtTokenIssuer` берут один `settings.secret_key` ([app/core/deps.py](../app/core/deps.py)). Дефолт `dev-insecure-change-me-not-for-prod` зашит и в [app/core/config.py](../app/core/config.py), и в compose.
 - `reject_pii` смотрит только на имена ключей ([app/domain/pii.py](../app/domain/pii.py)). Строка с email или телефоном внутри `raw_name` / `lab_name` проходит.
 - В корне лежат и [bun.lock](../bun.lock), и [package-lock.json](../package-lock.json). Поля `packageManager` нет.
@@ -24,13 +24,16 @@
 
 ```mermaid
 flowchart LR
-  vercel[Vercel frontend]
-  vps[Backend host]
+  browser[Browser]
+  nginx[nginx on VPS]
+  api[FastAPI]
   pg[Postgres]
   gemini[Gemini paid key]
-  vercel -->|"VITE_API_BASE_URL"| vps
-  vps --> pg
-  vps --> gemini
+  browser --> nginx
+  nginx -->|SPA static| browser
+  nginx -->|"/api /healthz"| api
+  api --> pg
+  api --> gemini
 ```
 
 ## Приоритет 1 — до питча
@@ -49,16 +52,16 @@ flowchart LR
 
 **Не код, блокеры питча — нужны Андрей и доступ к аккаунтам**
 
-4. Хостинг. Compose уже поднимает `postgres` + `api` + `nginx`. Рекомендация: один VPS и этот же compose (один контейнер API, in-memory limiter для демо достаточен). Railway/Render — запасной путь, если админить VPS некому. В обоих случаях: реальные `SEED_HASH_SECRET` и `JWT_SECRET` (разные, каждый от 32 символов, без префикса `dev-insecure`), `APP_ENV=production`, `POSTGRES_PASSWORD`, `GEMINI_API_KEY`, `CORS_ORIGINS` = домен Vercel, на Vercel задать `VITE_API_BASE_URL` на URL API. Секреты только в env хоста. Один контейнер API: rate limit в памяти процесса, несколько реплик не поднимать.
+4. Хостинг. Dev Compose поднимает `postgres` + `api` + nginx без статики. Боевой [docker-compose.prod.yml](../docker-compose.prod.yml) на одном VPS поднимает `postgres` + один контейнер `api` + nginx, который отдаёт собранный фронт и проксирует API. Vercel закрыт, отдельный хост фронта не используем. На сервере: реальные `SEED_HASH_SECRET` и `JWT_SECRET` (разные, каждый от 32 символов, без префикса `dev-insecure`), `APP_ENV=production`, `POSTGRES_PASSWORD`, `GEMINI_API_KEY`, `CORS_ORIGINS` = публичный адрес VPS. `VITE_API_BASE_URL` пустой, сайт и API на одном origin. Секреты только в env хоста. Один контейнер API: rate limit в памяти процесса, несколько реплик не поднимать. HTTPS — когда появится домен, перед тем же nginx.
 5. Платный Gemini-ключ. В репозитории ключ не хранится. Включить billing в Google Cloud, выпустить ключ в AI Studio, положить в env хоста. Бесплатный ключ на питч не оставлять: [.env.example](../.env.example) уже предупреждает, что free-tier может уйти в обучение моделей.
-6. 20–30 живых opt-in записей. Фейковые медданные в БД не сидим. После того как фронт на Vercel ходит в живой API, люди регистрируются, подтверждают панель и включают public sharing. Проверка питча: `GET /api/v1/dataset` возвращает строки, не пустой массив.
+6. 20–30 живых opt-in записей. Фейковые медданные в БД не сидим. После того как боевой Compose на VPS отдаёт сайт и API с одного адреса, люди регистрируются, подтверждают панель и включают public sharing. Проверка питча: `GET /api/v1/dataset` возвращает строки, не пустой массив.
 
 ## Приоритет 2 — техдолг до фриза, без Redis
 
 - Развести ключи. Два env: `SEED_HASH_SECRET` (argon2 pepper) и `JWT_SECRET` (подпись). Оба обязательны, не равны друг другу. Проброс в [app/core/config.py](../app/core/config.py), [app/core/deps.py](../app/core/deps.py), [docker-compose.yml](../docker-compose.yml), [.env.example](../.env.example). Старый единый `SECRET_KEY` для этих двух целей убрать. Тесты в [app/tests/test_security.py](../app/tests/test_security.py) и [app/tests/test_accounts.py](../app/tests/test_accounts.py) уже создают hasher и issuer разными строками — прод должен вести себя так же.
 - Fail-fast на проде. При `APP_ENV=production` процесс не стартует, если секрет равен `dev-insecure-change-me-not-for-prod`, пустой или короче 32 символов. Проверка в `lifespan` ([app/main.py](../app/main.py)). Локальный compose и CI остаются на не-prod.
 - PII по содержимому. В [app/domain/pii.py](../app/domain/pii.py) дополнительно сканировать строковые значения: email и телефон — жёстко; ФИО — узкий шаблон (2–3 слова с заглавной, кириллица или латиница) только в свободных полях вроде `raw_name`, `lab_name`, заметок. `Quest Diagnostics` и `Serum Albumin` должны проходить — это уже зафиксировано в [app/tests/test_pii.py](../app/tests/test_pii.py). Новые тесты: email и телефон внутри `raw_name` отклоняются.
-- Один пакетный менеджер: **npm**. Фронт остаётся на Vercel, а ошибка ERESOLVE была npm-овская. Удалить [bun.lock](../bun.lock), оставить [package-lock.json](../package-lock.json). В `package.json` при необходимости указать `"packageManager": "npm@..."`.
+- Один пакетный менеджер: **npm**. Ошибка ERESOLVE при сборке фронта была npm-овская. Удалить [bun.lock](../bun.lock), оставить [package-lock.json](../package-lock.json). В `package.json` при необходимости указать `"packageManager": "npm@..."`. Боевой образ фронта собирается через `npm ci`.
 - Redis / общий rate limit не делаем. В комментарии к limiter уже сказано, что окно живёт в одном процессе. Для одного контейнера на питче этого хватает. В плане деплоя явно: не поднимать несколько реплик API.
 
 ## Приоритет 3 — после гранта, в этот заход не код
@@ -71,7 +74,7 @@ flowchart LR
 
 ## Порядок работ
 
-Сначала код, который не зависит от хоста: nginx auth, терминал, seed-фраза, два секрета, fail-fast, PII, удаление `bun.lock`, строка статуса в PLAN.md. Потом чеклист для Андрея: VPS или Railway, paid Gemini, `VITE_API_BASE_URL`, набор 20–30 пользователей. Redis, Claude, PQC и GitHub-организацию в этот заход не включаем.
+Сначала код, который не зависит от хоста: nginx auth, терминал, seed-фраза, два секрета, fail-fast, PII, удаление `bun.lock`, строка статуса в PLAN.md, боевой Compose со статикой фронта. Потом чеклист для Андрея: сам VPS, paid Gemini, набор 20–30 пользователей. Redis, Claude, PQC и GitHub-организацию в этот заход не включаем.
 
 ## Чеклист
 
@@ -83,4 +86,5 @@ flowchart LR
 - [x] Удалить `bun.lock`, зафиксировать npm
 - [x] Обновить статус в `docx/PLAN.md`
 - [x] Запасной канал восстановления не делаем (решение Бакыта 23.09.2026)
-- [ ] Хостинг (VPS или Railway), платный Gemini-ключ, 20–30 живых opt-in
+- [x] Боевой Compose: один VPS, nginx отдаёт фронт и API, без Vercel
+- [ ] Сам VPS, платный Gemini-ключ, 20–30 живых opt-in

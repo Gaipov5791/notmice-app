@@ -1,0 +1,88 @@
+# Production: one VPS, site + API + Postgres. No Vercel.
+# Start: docker compose -f docker-compose.prod.yml up -d --build
+# Secrets come from the host environment. This file has no dev defaults.
+# Health: http://localhost:8080/healthz
+# HTTPS waits for a domain in front of this nginx.
+
+name: notmice
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-notmice}
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+      POSTGRES_DB: ${POSTGRES_DB:-notmice}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # One API container. Rate limits and extract sessions live in this process; do not scale `api`.
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      APP_ENV: production
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-notmice}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-notmice}
+      CORS_ORIGINS: "${CORS_ORIGINS:?CORS_ORIGINS is required}"
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      SEED_HASH_SECRET: "${SEED_HASH_SECRET:?SEED_HASH_SECRET is required}"
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is required}"
+      VISION_PROVIDER: ${VISION_PROVIDER:-gemini}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
+      GEMINI_DAILY_TOKEN_BUDGET: ${GEMINI_DAILY_TOKEN_BUDGET:-2000000}
+      GEMINI_USER_DAILY_TOKEN_BUDGET: ${GEMINI_USER_DAILY_TOKEN_BUDGET:-100000}
+      GEMINI_IP_DAILY_TOKEN_BUDGET: ${GEMINI_IP_DAILY_TOKEN_BUDGET:-150000}
+      GEMINI_CALL_TOKEN_RESERVE: ${GEMINI_CALL_TOKEN_RESERVE:-16000}
+      GEMINI_USER_DAILY_CALLS: ${GEMINI_USER_DAILY_CALLS:-8}
+      GEMINI_IP_DAILY_CALLS: ${GEMINI_IP_DAILY_CALLS:-12}
+      GEMINI_BUDGET_WARN_RATIO: ${GEMINI_BUDGET_WARN_RATIO:-0.8}
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY:-}
+      CLAUDE_MODEL: ${CLAUDE_MODEL:-claude-sonnet-5}
+      DATASET_RATE_LIMIT: ${DATASET_RATE_LIMIT:-60}
+      DATASET_RATE_LIMIT_WINDOW_SECONDS: ${DATASET_RATE_LIMIT_WINDOW_SECONDS:-60}
+      TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 25s
+    restart: unless-stopped
+
+  proxy:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      args:
+        VITE_API_BASE_URL: ""
+    environment:
+      DOCS_BASIC_AUTH_USER: "${DOCS_BASIC_AUTH_USER:?DOCS_BASIC_AUTH_USER is required}"
+      DOCS_BASIC_AUTH_PASSWORD: "${DOCS_BASIC_AUTH_PASSWORD:?DOCS_BASIC_AUTH_PASSWORD is required}"
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

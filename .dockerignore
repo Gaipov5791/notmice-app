@@ -8,7 +8,7 @@ __pycache__
 .pytest_cache
 .ruff_cache
 .coverage
-src
+# src is the Vite app. The production edge image copies it. The API image does not.
 docx
 *.md
 .cursor
