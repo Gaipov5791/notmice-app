@@ -1,0 +1,13 @@
+# HTTPS for the VPS. Use with the production file:
+# docker compose -f docker-compose.prod.yml -f docker-compose.tls.yml up -d
+# Certificates live on the host in /etc/letsencrypt. This file does not create them.
+
+services:
+  proxy:
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+      - ./proxy/nginx.tls.conf:/etc/nginx/conf.d/default.conf:ro
