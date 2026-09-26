@@ -377,6 +377,51 @@ async def test_extract_confirm_http_flow() -> None:
 
 
 @pytest.mark.asyncio
+async def test_confirm_accepts_nine_canonical_phenoage_names() -> None:
+    """The review screen confirms the nine canonical names, not raw PDF labels."""
+    accounts = _account_service()
+    uploads, _vision, labs = _upload_bundle()
+    application = _app(accounts, uploads)
+    jpeg = b"\xff\xd8\xff\xe0" + b"\x44" * 48
+    markers = [
+        {"raw_name": "Serum Albumin", "value": 46.0, "unit": "g/L"},
+        {"raw_name": "Serum Creatinine", "value": 0.88, "unit": "mg/dL"},
+        {"raw_name": "Fasting Serum Glucose", "value": 84.0, "unit": "mg/dL"},
+        {"raw_name": "hs-C-Reactive Protein", "value": 0.8, "unit": "mg/L"},
+        {"raw_name": "Lymphocyte Percentage", "value": 32.5, "unit": "%"},
+        {"raw_name": "Mean Corpuscular Volume (MCV)", "value": 88.5, "unit": "fL"},
+        {"raw_name": "Red Cell Distribution Width (RDW)", "value": 12.1, "unit": "%"},
+        {"raw_name": "Alkaline Phosphatase (ALP)", "value": 58.0, "unit": "U/L"},
+        {"raw_name": "White Blood Cell Count (WBC)", "value": 5.4, "unit": "10³/µL"},
+    ]
+    transport = ASGITransport(app=application)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        created = await client.post("/api/v1/accounts", json={})
+        token = created.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        extracted = await client.post(
+            "/api/v1/uploads/extract",
+            headers=headers,
+            files={"file": ("panel.jpg", jpeg, "image/jpeg")},
+        )
+        assert extracted.status_code == 200
+        confirmed = await client.post(
+            "/api/v1/uploads/confirm",
+            headers=headers,
+            json={
+                "extract_token": extracted.json()["extract_token"],
+                "lab_name": "Quest Diagnostics",
+                "collected_at": "2023-11-15",
+                "chronological_age": 42,
+                "markers": markers,
+            },
+        )
+    assert confirmed.status_code == 200
+    assert confirmed.json()["marker_count"] == 9
+    assert [item.raw_name for item in labs.markers[0]] == [item["raw_name"] for item in markers]
+
+
+@pytest.mark.asyncio
 async def test_extract_rejects_unsupported_type() -> None:
     """A text file is not parsed as a lab report."""
     accounts = _account_service()

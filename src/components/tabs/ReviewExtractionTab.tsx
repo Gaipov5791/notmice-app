@@ -54,6 +54,12 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
 
+  const confirmedMarkers = PHENOAGE_BIOMARKERS.map((bio) => ({
+    rawName: bio.name,
+    value: localValues[bio.id] ?? bio.optimalRange[0],
+    unit: bio.unit,
+  }));
+
   const handleValueChange = (id: string, val: number) => {
     const next = { ...localValues, [id]: val };
     setLocalValues(next);
@@ -74,31 +80,19 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
         setConfirmBusy(true);
         setConfirmError(null);
         try {
-          const markers = (currentPanel.extractedMarkers ?? []).map((marker) => ({
-            rawName: marker.rawName,
-            value:
-              marker.canonicalId && localValues[marker.canonicalId] !== undefined
-                ? localValues[marker.canonicalId]
-                : marker.value,
-            unit: marker.unit,
-          }));
-          const fallback =
-            markers.length > 0
-              ? markers
-              : PHENOAGE_BIOMARKERS.map((bio) => ({
-                  rawName: bio.name,
-                  value: localValues[bio.id],
-                  unit: bio.unit,
-                }));
           await confirmLabExtraction(accessToken, {
             extractToken: currentPanel.extractToken,
             labName: currentPanel.labName,
             collectedAt: currentPanel.testDate,
             chronologicalAge: currentPanel.chronologicalAge,
-            markers: fallback,
+            markers: confirmedMarkers,
           });
         } catch (err) {
-          setConfirmError(err instanceof Error ? err.message : getActiveI18n().messages.shell.confirmFailed);
+          const shell = getActiveI18n().messages.shell;
+          const rejected = err instanceof Error && err.message === 'Forbidden field';
+          setConfirmError(
+            rejected ? shell.confirmRejected : err instanceof Error ? err.message : shell.confirmFailed,
+          );
           setConfirmBusy(false);
           return;
         }
@@ -170,10 +164,9 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
         </div>
       </div>
 
-      {/* Main Dual-Pane: Left Document Crop Preview vs Right Extraction Table */}
+      {/* Main Dual-Pane: preview follows the edited values; table comes first on a phone */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column: Interactive Document Crop Viewer */}
-        <div className="lg:col-span-4 flex flex-col gap-4 sticky top-24">
+        <div className="order-2 lg:order-1 lg:col-span-4 flex flex-col gap-4 lg:sticky lg:top-24">
           <div className="bg-[#ffffff] p-5 rounded-xl border border-[#cbd5e1] shadow-xs flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <span className="font-['Inter'] text-xs font-bold text-[#0b1c30] flex items-center gap-1.5">
@@ -185,92 +178,34 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
               </span>
             </div>
 
-            {/* Simulated Lab Snippet Paper */}
             <div className="bg-[#f8f9ff] border border-[#dce9ff] rounded-lg p-4 font-['JetBrains_Mono'] text-xs space-y-3 relative shadow-inner">
-              <div className="text-[10px] text-[#565e74] border-b border-[#e2e8f0] pb-2 flex justify-between">
-                <span>QUEST DIAGNOSTICS INC.</span>
-                <span>{fill(copy.collected, { date: currentPanel.testDate })}</span>
+              <div className="text-[10px] text-[#565e74] border-b border-[#e2e8f0] pb-2 flex justify-between gap-3">
+                <span className="truncate">{currentPanel.labName}</span>
+                <span className="shrink-0">{fill(copy.collected, { date: currentPanel.testDate })}</span>
               </div>
 
-              {/* Snippet Line Items */}
               <div className="space-y-1 text-[11px]">
-                <div
-                  onClick={() => setActiveSnippetKey('albumin')}
-                  className={`p-1.5 rounded cursor-pointer transition-colors flex justify-between items-center ${
-                    activeSnippetKey === 'albumin'
-                      ? 'bg-[#cce5ff] border border-[#006194] text-[#001d31] font-bold'
-                      : 'hover:bg-[#e2e8f0]/60 text-[#3f4850]'
-                  }`}
-                >
-                  <span>ALBUMIN, SERUM</span>
-                  <span>46.2 g/L</span>
-                  <span className="text-[9px] text-[#565e74]">[35.0-50.0]</span>
-                </div>
-
-                <div
-                  onClick={() => setActiveSnippetKey('crp')}
-                  className={`p-1.5 rounded cursor-pointer transition-colors flex justify-between items-center ${
-                    activeSnippetKey === 'crp'
-                      ? 'bg-[#cce5ff] border border-[#006194] text-[#001d31] font-bold'
-                      : 'hover:bg-[#e2e8f0]/60 text-[#3f4850]'
-                  }`}
-                >
-                  <span>C-REACTIVE PROTEIN, HS</span>
-                  <span>0.80 mg/L</span>
-                  <span className="text-[9px] text-[#565e74]">[&lt;1.00]</span>
-                </div>
-
-                <div
-                  onClick={() => setActiveSnippetKey('glucose')}
-                  className={`p-1.5 rounded cursor-pointer transition-colors flex justify-between items-center ${
-                    activeSnippetKey === 'glucose'
-                      ? 'bg-[#cce5ff] border border-[#006194] text-[#001d31] font-bold'
-                      : 'hover:bg-[#e2e8f0]/60 text-[#3f4850]'
-                  }`}
-                >
-                  <span>GLUCOSE, FASTING</span>
-                  <span>84 mg/dL</span>
-                  <span className="text-[9px] text-[#565e74]">[65-99]</span>
-                </div>
-
-                <div
-                  onClick={() => setActiveSnippetKey('creatinine')}
-                  className={`p-1.5 rounded cursor-pointer transition-colors flex justify-between items-center ${
-                    activeSnippetKey === 'creatinine'
-                      ? 'bg-[#cce5ff] border border-[#006194] text-[#001d31] font-bold'
-                      : 'hover:bg-[#e2e8f0]/60 text-[#3f4850]'
-                  }`}
-                >
-                  <span>CREATININE</span>
-                  <span>0.85 mg/dL</span>
-                  <span className="text-[9px] text-[#565e74]">[0.60-1.20]</span>
-                </div>
-
-                <div
-                  onClick={() => setActiveSnippetKey('lymphocyte')}
-                  className={`p-1.5 rounded cursor-pointer transition-colors flex justify-between items-center ${
-                    activeSnippetKey === 'lymphocyte'
-                      ? 'bg-[#cce5ff] border border-[#006194] text-[#001d31] font-bold'
-                      : 'hover:bg-[#e2e8f0]/60 text-[#3f4850]'
-                  }`}
-                >
-                  <span>LYMPHOCYTES (%)</span>
-                  <span>33.2 %</span>
-                  <span className="text-[9px] text-[#565e74]">[20.0-42.0]</span>
-                </div>
-
-                <div
-                  onClick={() => setActiveSnippetKey('rdw')}
-                  className={`p-1.5 rounded cursor-pointer transition-colors flex justify-between items-center ${
-                    activeSnippetKey === 'rdw'
-                      ? 'bg-[#cce5ff] border border-[#006194] text-[#001d31] font-bold'
-                      : 'hover:bg-[#e2e8f0]/60 text-[#3f4850]'
-                  }`}
-                >
-                  <span>RDW</span>
-                  <span>12.0 %</span>
-                  <span className="text-[9px] text-[#565e74]">[11.0-15.0]</span>
-                </div>
+                {PHENOAGE_BIOMARKERS.map((bio) => {
+                  const currentVal = localValues[bio.id] ?? bio.optimalRange[0];
+                  const isActive = activeSnippetKey === bio.id;
+                  const label = isBiomarkerId(bio.id) ? m.biomarkers[bio.id].name : bio.name;
+                  return (
+                    <div
+                      key={bio.id}
+                      onClick={() => setActiveSnippetKey(bio.id)}
+                      className={`p-1.5 rounded cursor-pointer transition-colors flex justify-between items-center gap-2 ${
+                        isActive
+                          ? 'bg-[#cce5ff] border border-[#006194] text-[#001d31] font-bold'
+                          : 'hover:bg-[#e2e8f0]/60 text-[#3f4850]'
+                      }`}
+                    >
+                      <span className="min-w-0">{label}</span>
+                      <span className="shrink-0">
+                        {currentVal} {bio.unit}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -296,8 +231,7 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
           </div>
         </div>
 
-        {/* Right Column: Editable Extraction Matrix Table */}
-        <div className="lg:col-span-8 flex flex-col gap-4">
+        <div className="order-1 lg:order-2 lg:col-span-8 flex flex-col gap-4">
           <div className="bg-[#ffffff] rounded-xl border border-[#cbd5e1] shadow-xs overflow-hidden">
             <div className="px-5 py-4 bg-[#eff4ff] border-b border-[#dce9ff] flex items-center justify-between">
               <div>

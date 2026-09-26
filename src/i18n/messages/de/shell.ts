@@ -22,6 +22,8 @@ export const shell = {
   couldNotSignIn: 'Anmeldung fehlgeschlagen',
   extractionFailed: 'Extraktion fehlgeschlagen',
   confirmFailed: 'Bestätigung fehlgeschlagen',
+  confirmRejected:
+    'Der Berichtstext sieht wie ein Name oder eine Telefonnummer aus und wurde nicht gespeichert.',
   unknownLaboratory: 'Unbekanntes Labor',
   years: 'Jahre',
   yrs: 'J.',

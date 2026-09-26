@@ -22,6 +22,8 @@ export const shell = {
   couldNotSignIn: 'Could not sign in',
   extractionFailed: 'Extraction failed',
   confirmFailed: 'Confirm failed',
+  confirmRejected:
+    'The report text looks like a name or phone number, so it was not saved.',
   unknownLaboratory: 'Unknown laboratory',
   years: 'years',
   yrs: 'yrs',
