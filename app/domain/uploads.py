@@ -140,6 +140,45 @@ class ConfirmedLabResult:
     marker_count: int
 
 
+@dataclass(frozen=True, slots=True)
+class OwnedMarker:
+    """One analyte returned to the account that confirmed it."""
+
+    raw_name: str
+    canonical_id: str | None
+    loinc_code: str | None
+    value: Decimal
+    unit: str
+
+
+@dataclass(frozen=True, slots=True)
+class OwnedLabPanel:
+    """A confirmed panel for its owner. No internal user id."""
+
+    collected_at: date | None
+    lab_name: str | None
+    chronological_age: Decimal | None
+    confirmed_at: datetime
+    document_sha256: str
+    markers: tuple[OwnedMarker, ...]
+
+
+def usable_chronological_age(value: Decimal | float | None) -> Decimal | None:
+    """Return ``value`` when it is an age in years, otherwise ``None``.
+
+    A birth year copied from a lab header is not an age and must not fail confirm.
+
+    Args:
+        value: Reported age, or ``None`` when the report did not state one.
+    """
+    if value is None:
+        return None
+    age = Decimal(str(value))
+    if age < 1 or age > 120:
+        return None
+    return age
+
+
 def parser_version_for(provider: str, model: str, *, dictionary_version: str) -> str:
     """Return a provenance parser version string.
 

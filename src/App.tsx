@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { TabType, LabPanelData, HistoricalTestRecord, AccountState, PhenoAgeCalculation } from './types';
 import { INITIAL_BIOMARKERS } from './data/phenoAgeData';
+import { fetchOwnLabResults } from './api/uploads';
+import { isBiomarkerId } from './i18n/biomarkerIds';
 import { fetchPhenoAge, PhenoAgeScore } from './api/phenoage';
 import { displayBiomarkerScores, displayPercentile, generateCryptoHash } from './utils/phenoAgeMath';
 import {
@@ -47,6 +49,22 @@ function markSplashSeen(): void {
   } catch {
     // Storage can be blocked; the splash still closes for this visit.
   }
+}
+
+function panelFromHistory(record: HistoricalTestRecord): LabPanelData {
+  return {
+    id: record.id,
+    labName: record.labSource,
+    testDate: record.date,
+    sourceType: 'pdf',
+    fileName: record.labSource,
+    chronologicalAge: record.chronologicalAge,
+    gender: 'male',
+    biomarkers: { ...record.biomarkers },
+    confidenceScores: {},
+    verified: true,
+    hash: record.hash,
+  };
 }
 
 function tutorialPanel(): LabPanelData {
@@ -102,6 +120,7 @@ export default function App() {
             createdAt: current.createdAt,
             accessToken: token,
           });
+          await restoreSavedPanels(token);
         }
       } catch {
         clearStoredToken();
@@ -173,6 +192,50 @@ export default function App() {
     setChronologicalAge(panel.chronologicalAge);
   };
 
+  const restoreSavedPanels = async (token: string) => {
+    try {
+      const panels = await fetchOwnLabResults(token);
+      if (panels.length === 0) {
+        return;
+      }
+      const records: HistoricalTestRecord[] = [];
+      for (const panel of panels) {
+        const saved: Record<string, number> = {};
+        for (const marker of panel.markers) {
+          if (marker.canonicalId && isBiomarkerId(marker.canonicalId)) {
+            saved[marker.canonicalId] = marker.value;
+          }
+        }
+        const panelBiomarkers = { ...INITIAL_BIOMARKERS, ...saved };
+        const age = panel.chronologicalAge ?? 42;
+        let phenoAge = 0;
+        let delta = 0;
+        try {
+          const score = await fetchPhenoAge(age, panelBiomarkers);
+          phenoAge = score.phenoAge;
+          delta = score.ageDelta;
+        } catch {
+          // The saved numbers still load when the score request fails.
+        }
+        records.push({
+          id: panel.documentSha256 || panel.confirmedAt,
+          date: panel.collectedAt ?? panel.confirmedAt.slice(0, 10),
+          chronologicalAge: age,
+          phenoAge,
+          delta,
+          labSource: panel.labName ?? getActiveI18n().messages.shell.unknownLaboratory,
+          biomarkers: panelBiomarkers,
+          hash: panel.documentSha256,
+        });
+      }
+      setHistory(records);
+      const latest = records[records.length - 1];
+      handleLoadPanel(panelFromHistory(latest));
+    } catch {
+      // A failed reload leaves the current screen in place.
+    }
+  };
+
   const handleSaveToHistory = () => {
     if (!phenoAgeCalculation.isValid) {
       return;
@@ -240,6 +303,7 @@ export default function App() {
         accessToken: session.accessToken,
       });
       setRevealedMnemonic(null);
+      await restoreSavedPanels(session.accessToken);
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : getActiveI18n().messages.shell.couldNotSignIn);
     } finally {
@@ -346,6 +410,10 @@ export default function App() {
             onUpdateBiomarkers={setBiomarkers}
             setActiveTab={setActiveTab}
             accessToken={account?.accessToken ?? null}
+            onSaved={() => {
+              const token = account?.accessToken;
+              return token ? restoreSavedPanels(token) : Promise.resolve();
+            }}
           />
         )}
 

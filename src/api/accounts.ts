@@ -80,17 +80,29 @@ function jsonHeaders(token?: string): HeadersInit {
 
 export function readStoredToken(): string | null {
   try {
-    return sessionStorage.getItem(TOKEN_KEY);
+    const lasting = localStorage.getItem(TOKEN_KEY);
+    if (lasting) {
+      return lasting;
+    }
+    const legacy = sessionStorage.getItem(TOKEN_KEY);
+    if (!legacy) {
+      return null;
+    }
+    localStorage.setItem(TOKEN_KEY, legacy);
+    sessionStorage.removeItem(TOKEN_KEY);
+    return legacy;
   } catch {
     return null;
   }
 }
 
 export function storeToken(token: string): void {
-  sessionStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(TOKEN_KEY, token);
+  sessionStorage.removeItem(TOKEN_KEY);
 }
 
 export function clearStoredToken(): void {
+  localStorage.removeItem(TOKEN_KEY);
   sessionStorage.removeItem(TOKEN_KEY);
 }
 

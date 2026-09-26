@@ -3,9 +3,9 @@ export const history = {
   stageMeta: 'Multi-Year PhenoAge Trajectory',
   title: 'Biomarker & PhenoAge History',
   emptyLead:
-    'Tutorial start: no laboratory history is loaded. The numbers on the landing page are a worked example, not a patient record. A panel appears here only after you save one from this session.',
+    'No confirmed laboratory panel is saved on this account yet. The numbers on the landing page are a worked example, not a patient record.',
   sessionLead:
-    'Saved panels from this browser session. This list is not loaded from the laboratory dataset.',
+    'Panels confirmed on this account. Sign in with the same recovery phrase to see them again. A laboratory cannot look them up.',
   exportTitle: 'Export clean, printable PDF report of historical trends and biomarkers',
   export: 'Export PDF Report',
   addDate: 'Add Test Date',

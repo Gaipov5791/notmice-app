@@ -23,6 +23,23 @@ export class ExtractRequestError extends Error {
   }
 }
 
+export interface OwnMarker {
+  rawName: string;
+  canonicalId: string | null;
+  loincCode: string | null;
+  value: number;
+  unit: string;
+}
+
+export interface OwnLabResult {
+  collectedAt: string | null;
+  labName: string | null;
+  chronologicalAge: number | null;
+  confirmedAt: string;
+  documentSha256: string;
+  markers: OwnMarker[];
+}
+
 export interface ConfirmResult {
   labResultId: string;
   documentSha256: string;
@@ -53,6 +70,27 @@ interface ExtractPayload {
   tokens_used: number;
   tokens_limit: number;
   warning: boolean;
+}
+
+interface OwnMarkerPayload {
+  raw_name: string;
+  canonical_id: string | null;
+  loinc_code: string | null;
+  value: number;
+  unit: string;
+}
+
+interface OwnLabResultPayload {
+  collected_at: string | null;
+  lab_name: string | null;
+  chronological_age: number | null;
+  confirmed_at: string;
+  document_sha256: string;
+  markers: OwnMarkerPayload[];
+}
+
+interface OwnLabResultsPayload {
+  results: OwnLabResultPayload[];
 }
 
 interface ConfirmPayload {
@@ -149,6 +187,30 @@ export async function extractLabFile(token: string, file: File): Promise<Extract
       warning: payload.warning,
     },
   };
+}
+
+export async function fetchOwnLabResults(token: string): Promise<OwnLabResult[]> {
+  const response = await fetch(apiUrl('/api/v1/uploads/results'), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+  const payload = (await response.json()) as OwnLabResultsPayload;
+  return payload.results.map((panel) => ({
+    collectedAt: panel.collected_at,
+    labName: panel.lab_name,
+    chronologicalAge: panel.chronological_age,
+    confirmedAt: panel.confirmed_at,
+    documentSha256: panel.document_sha256,
+    markers: panel.markers.map((marker) => ({
+      rawName: marker.raw_name,
+      canonicalId: marker.canonical_id,
+      loincCode: marker.loinc_code,
+      value: marker.value,
+      unit: marker.unit,
+    })),
+  }));
 }
 
 export async function confirmLabExtraction(

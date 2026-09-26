@@ -19,6 +19,8 @@ from app.domain.uploads import (
     ExtractSessionNotFoundError,
     GeminiBudgetExhaustedError,
     MappedMarker,
+    OwnedLabPanel,
+    OwnedMarker,
     RawLabExtraction,
     RawMarker,
     VisionNotConfiguredError,
@@ -116,6 +118,9 @@ class InMemoryLabStore:
     def __init__(self) -> None:
         self.saved: list[ConfirmedLabResult] = []
         self.markers: list[tuple[MappedMarker, ...]] = []
+        self.lab_names: list[str | None] = []
+        self.ages: list[Decimal | None] = []
+        self._owners: list[tuple[UUID, OwnedLabPanel]] = []
 
     async def save_confirmed(
         self,
@@ -129,7 +134,6 @@ class InMemoryLabStore:
         document_sha256: str,
         markers: tuple[MappedMarker, ...],
     ) -> ConfirmedLabResult:
-        del user_id, collected_at, lab_name, chronological_age
         result = ConfirmedLabResult(
             lab_result_id=uuid4(),
             document_sha256=document_sha256,
@@ -139,7 +143,35 @@ class InMemoryLabStore:
         )
         self.saved.append(result)
         self.markers.append(markers)
+        self.lab_names.append(lab_name)
+        self.ages.append(chronological_age)
+        self._owners.append(
+            (
+                user_id,
+                OwnedLabPanel(
+                    collected_at=collected_at,
+                    lab_name=lab_name,
+                    chronological_age=chronological_age,
+                    confirmed_at=confirmed_at,
+                    document_sha256=document_sha256,
+                    markers=tuple(
+                        OwnedMarker(
+                            raw_name=marker.raw_name,
+                            canonical_id=marker.canonical_id,
+                            loinc_code=marker.loinc_code,
+                            value=marker.value,
+                            unit=marker.unit,
+                        )
+                        for marker in markers
+                    ),
+                ),
+            )
+        )
+        del parser_version
         return result
+
+    async def list_confirmed(self, user_id: UUID) -> tuple[OwnedLabPanel, ...]:
+        return tuple(panel for owner, panel in self._owners if owner == user_id)
 
 
 def _account_service() -> AccountService:
@@ -419,6 +451,51 @@ async def test_confirm_accepts_nine_canonical_phenoage_names() -> None:
     assert confirmed.status_code == 200
     assert confirmed.json()["marker_count"] == 9
     assert [item.raw_name for item in labs.markers[0]] == [item["raw_name"] for item in markers]
+
+
+@pytest.mark.asyncio
+async def test_confirm_keeps_values_when_labels_look_personal() -> None:
+    """A name or birth year in the confirm body does not reject the measured values."""
+    accounts = _account_service()
+    uploads, _vision, labs = _upload_bundle()
+    application = _app(accounts, uploads)
+    jpeg = b"\xff\xd8\xff\xe0" + b"\x55" * 48
+    transport = ASGITransport(app=application)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        created = await client.post("/api/v1/accounts", json={})
+        token = created.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        extracted = await client.post(
+            "/api/v1/uploads/extract",
+            headers=headers,
+            files={"file": ("panel.jpg", jpeg, "image/jpeg")},
+        )
+        confirmed = await client.post(
+            "/api/v1/uploads/confirm",
+            headers=headers,
+            json={
+                "extract_token": extracted.json()["extract_token"],
+                "lab_name": "Иван Петров",
+                "collected_at": "2023-11-15",
+                "chronological_age": 1984,
+                "markers": [
+                    {"raw_name": "Serum Albumin", "value": 46.2, "unit": "g/L"},
+                    {"raw_name": "Мочевая Кислота", "value": 320, "unit": "мкмоль/л"},
+                ],
+            },
+        )
+        assert confirmed.status_code == 200
+        owned = await client.get("/api/v1/uploads/results", headers=headers)
+    assert owned.status_code == 200
+    body = owned.json()["results"]
+    assert len(body) == 1
+    assert body[0]["lab_name"] is None
+    assert body[0]["chronological_age"] is None
+    saved_names = [item.raw_name for item in labs.markers[0]]
+    assert "Serum Albumin" in saved_names
+    assert "Иван Петров" not in saved_names
+    assert all("Мочевая" not in name for name in saved_names)
+    assert labs.ages[0] is None
 
 
 @pytest.mark.asyncio

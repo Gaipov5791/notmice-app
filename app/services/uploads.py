@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Protocol
@@ -11,6 +12,7 @@ import structlog
 
 from app.domain.enums import MappingStatus
 from app.domain.loinc import LoincDictionary
+from app.domain.pii import PIIValidationError, contains_personal_text, reject_pii
 from app.domain.uploads import (
     CompletedExtract,
     ConfirmedLabResult,
@@ -18,6 +20,7 @@ from app.domain.uploads import (
     ExtractedPanel,
     MappedMarker,
     NoMarkersError,
+    OwnedLabPanel,
     PayloadTooLargeError,
     RawMarker,
     VisionExtractionError,
@@ -25,6 +28,7 @@ from app.domain.uploads import (
     map_marker,
     parse_collected_at,
     parser_version_for,
+    usable_chronological_age,
 )
 from app.services.extract_sessions import InMemoryExtractSessionStore
 from app.services.gemini_budget import GeminiTokenBudget
@@ -52,6 +56,9 @@ class LabResultStore(Protocol):
         markers: tuple[MappedMarker, ...],
     ) -> ConfirmedLabResult:
         """Insert confirmed rows and provenance."""
+
+    async def list_confirmed(self, user_id: UUID) -> tuple[OwnedLabPanel, ...]:
+        """Return confirmed panels for ``user_id``, oldest first."""
 
 
 class UploadService:
@@ -117,9 +124,7 @@ class UploadService:
         mapped = tuple(map_marker(item, self._dictionary) for item in raw.markers)
         if not mapped:
             raise NoMarkersError
-        chronological_age = (
-            Decimal(str(raw.chronological_age)) if raw.chronological_age is not None else None
-        )
+        chronological_age = usable_chronological_age(raw.chronological_age)
         panel = ExtractedPanel(
             document_sha256=digest,
             parser_version=parser_version_for(
@@ -172,19 +177,33 @@ class UploadService:
             markers: Human-edited analyte rows.
         """
         session = self._sessions.pop(extract_token, user_id)
-        mapped = tuple(map_marker(item, self._dictionary) for item in markers)
+        mapped = tuple(
+            _marker_without_personal_text(map_marker(item, self._dictionary)) for item in markers
+        )
         if not mapped:
             raise NoMarkersError
+        stored_lab_name = _label_without_personal_text(
+            lab_name if lab_name is not None else session.panel.lab_name
+        )
+        stored_age = usable_chronological_age(
+            chronological_age
+            if chronological_age is not None
+            else session.panel.chronological_age
+        )
+        reject_pii(
+            {
+                "lab_name": stored_lab_name,
+                "markers": [
+                    {"raw_name": marker.raw_name, "unit": marker.unit} for marker in mapped
+                ],
+            }
+        )
         confirmed_at = datetime.now(UTC)
         result = await self._lab_results.save_confirmed(
             user_id=user_id,
             collected_at=collected_at if collected_at is not None else session.panel.collected_at,
-            lab_name=lab_name if lab_name is not None else session.panel.lab_name,
-            chronological_age=(
-                chronological_age
-                if chronological_age is not None
-                else session.panel.chronological_age
-            ),
+            lab_name=stored_lab_name,
+            chronological_age=stored_age,
             parser_version=session.panel.parser_version,
             confirmed_at=confirmed_at,
             document_sha256=session.panel.document_sha256,
@@ -196,3 +215,45 @@ class UploadService:
             marker_count=result.marker_count,
         )
         return result
+
+    async def list_confirmed(self, user_id: UUID) -> tuple[OwnedLabPanel, ...]:
+        """Return panels this account has already confirmed.
+
+        Args:
+            user_id: Authenticated owner.
+        """
+        return await self._lab_results.list_confirmed(user_id)
+
+
+def _label_without_personal_text(value: str | None) -> str | None:
+    """Drop a laboratory name that contains a phone number or a person's name."""
+    if value is None:
+        return None
+    if contains_personal_text(value, parent_key="lab_name"):
+        return None
+    return value
+
+
+def _marker_without_personal_text(marker: MappedMarker) -> MappedMarker:
+    """Keep the measured value and drop a label that contains personal text.
+
+    Mapping runs before this, so a Russian analyte that the dictionary knows
+    keeps its canonical id even when the printed name looks like a person.
+    """
+    raw_name = marker.raw_name
+    unit = marker.unit
+    if not _marker_text_is_personal(raw_name, unit):
+        return marker
+    raw_name = marker.canonical_id or "Unmapped analyte"
+    if _marker_text_is_personal(raw_name, unit):
+        unit = "1"
+    return replace(marker, raw_name=raw_name, unit=unit)
+
+
+def _marker_text_is_personal(raw_name: str, unit: str) -> bool:
+    """Return True when the analyte label or unit would be rejected as personal data."""
+    try:
+        reject_pii({"raw_name": raw_name, "unit": unit})
+    except PIIValidationError:
+        return True
+    return False

@@ -13,12 +13,15 @@ from app.core.config import get_settings
 from app.core.deps import get_upload_service
 from app.core.rate_limit import resolve_client_key
 from app.domain.accounts import UserRecord
-from app.domain.pii import PIIValidationError, reject_pii
+from app.domain.pii import PIIValidationError
 from app.domain.schemas import (
     ConfirmRequest,
     ConfirmResponse,
     ExtractedMarkerView,
     ExtractResponse,
+    OwnedLabResultsResponse,
+    OwnedLabResultView,
+    OwnedMarkerView,
 )
 from app.domain.uploads import (
     EmptyPayloadError,
@@ -31,6 +34,7 @@ from app.domain.uploads import (
     UploadError,
     VisionExtractionError,
     VisionNotConfiguredError,
+    usable_chronological_age,
 )
 from app.services.uploads import UploadService
 
@@ -111,16 +115,15 @@ async def extract_upload(
         del payload
     session = completed.session
     panel = session.panel
-    chronological_age = (
-        float(panel.chronological_age) if panel.chronological_age is not None else None
-    )
+    chronological_age = usable_chronological_age(panel.chronological_age)
+    chronological_age_value = float(chronological_age) if chronological_age is not None else None
     return ExtractResponse(
         extract_token=session.token,
         document_sha256=panel.document_sha256,
         parser_version=panel.parser_version,
         lab_name=panel.lab_name,
         collected_at=panel.collected_at,
-        chronological_age=chronological_age,
+        chronological_age=chronological_age_value,
         markers=[
             ExtractedMarkerView(
                 raw_name=marker.raw_name,
@@ -146,9 +149,11 @@ async def confirm_upload(
     current: Annotated[UserRecord, Depends(get_current_user)],
     upload_service: Annotated[UploadService, Depends(get_upload_service)],
 ) -> ConfirmResponse:
-    """Persist reviewed values. SHA-256 comes from the extract session."""
+    """Persist reviewed values. SHA-256 comes from the extract session.
+
+    A name or phone in the laboratory label is dropped. The numeric markers are kept.
+    """
     try:
-        reject_pii(payload.model_dump(mode="json"))
         result = await upload_service.confirm(
             current.id,
             payload.extract_token,
@@ -177,4 +182,37 @@ async def confirm_upload(
         parser_version=result.parser_version,
         confirmed_at=result.confirmed_at,
         marker_count=result.marker_count,
+    )
+
+
+@router.get("/results", response_model=OwnedLabResultsResponse)
+async def list_own_results(
+    current: Annotated[UserRecord, Depends(get_current_user)],
+    upload_service: Annotated[UploadService, Depends(get_upload_service)],
+) -> OwnedLabResultsResponse:
+    """Return panels this account confirmed. Other accounts cannot read them."""
+    panels = await upload_service.list_confirmed(current.id)
+    return OwnedLabResultsResponse(
+        results=[
+            OwnedLabResultView(
+                collected_at=panel.collected_at,
+                lab_name=panel.lab_name,
+                chronological_age=(
+                    float(panel.chronological_age) if panel.chronological_age is not None else None
+                ),
+                confirmed_at=panel.confirmed_at,
+                document_sha256=panel.document_sha256,
+                markers=[
+                    OwnedMarkerView(
+                        raw_name=marker.raw_name,
+                        canonical_id=marker.canonical_id,
+                        loinc_code=marker.loinc_code,
+                        value=float(marker.value),
+                        unit=marker.unit,
+                    )
+                    for marker in panel.markers
+                ],
+            )
+            for panel in panels
+        ]
     )

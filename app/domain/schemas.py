@@ -117,8 +117,41 @@ class ConfirmRequest(BaseModel):
     extract_token: str = Field(min_length=8, max_length=128)
     lab_name: str | None = Field(default=None, max_length=255)
     collected_at: date | None = None
-    chronological_age: float | None = Field(default=None, ge=0, le=120)
+    chronological_age: float | None = None
     markers: list[ConfirmedMarkerInput] = Field(min_length=1)
+
+
+class OwnedMarkerView(BaseModel):
+    """One analyte on a panel the signed-in account confirmed."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    raw_name: str
+    canonical_id: str | None
+    loinc_code: str | None
+    value: float
+    unit: str
+
+
+class OwnedLabResultView(BaseModel):
+    """A confirmed panel returned only to its owner."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    collected_at: date | None
+    lab_name: str | None
+    chronological_age: float | None
+    confirmed_at: datetime
+    document_sha256: str
+    markers: list[OwnedMarkerView]
+
+
+class OwnedLabResultsResponse(BaseModel):
+    """Confirmed panels for the signed-in account, oldest first."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    results: list[OwnedLabResultView]
 
 
 class ConfirmResponse(BaseModel):

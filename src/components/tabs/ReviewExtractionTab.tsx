@@ -25,6 +25,7 @@ interface ReviewExtractionTabProps {
   onUpdateBiomarkers: (biomarkers: Record<string, number>) => void;
   setActiveTab: (tab: TabType) => void;
   accessToken: string | null;
+  onSaved?: () => Promise<void>;
 }
 
 export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
@@ -32,6 +33,7 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
   onUpdateBiomarkers,
   setActiveTab,
   accessToken,
+  onSaved,
 }) => {
   const { m } = useI18n();
   const copy = m.review;
@@ -80,13 +82,17 @@ export const ReviewExtractionTab: React.FC<ReviewExtractionTabProps> = ({
         setConfirmBusy(true);
         setConfirmError(null);
         try {
+          const age = currentPanel.chronologicalAge;
           await confirmLabExtraction(accessToken, {
             extractToken: currentPanel.extractToken,
             labName: currentPanel.labName,
             collectedAt: currentPanel.testDate,
-            chronologicalAge: currentPanel.chronologicalAge,
+            chronologicalAge: age >= 1 && age <= 120 ? age : null,
             markers: confirmedMarkers,
           });
+          if (onSaved) {
+            await onSaved();
+          }
         } catch (err) {
           const shell = getActiveI18n().messages.shell;
           const rejected = err instanceof Error && err.message === 'Forbidden field';

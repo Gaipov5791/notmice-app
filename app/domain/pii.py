@@ -225,6 +225,20 @@ def _reject_content(payload: object, *, parent_key: str | None, _path: str) -> N
             _reject_content(item, parent_key=parent_key, _path=f"{_path}[{index}]")
 
 
+def contains_personal_text(value: str, *, parent_key: str) -> bool:
+    """Return True when ``value`` would be rejected as personal data in ``parent_key``.
+
+    Args:
+        value: Free-text field about to be stored.
+        parent_key: JSON key the checker uses, such as ``lab_name`` or ``raw_name``.
+    """
+    try:
+        reject_pii({parent_key: value})
+    except PIIValidationError:
+        return True
+    return False
+
+
 def _contains_phone(value: str) -> bool:
     """Return True when ``value`` contains a 10-15 digit phone-shaped number."""
     return _match_has_phone_digits(_PHONE_RE, value)

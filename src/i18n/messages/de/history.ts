@@ -3,9 +3,9 @@ export const history = {
   stageMeta: 'Mehrjähriger PhenoAge-Verlauf',
   title: 'Biomarker- und PhenoAge-Verlauf',
   emptyLead:
-    'Tutorial-Start: Es ist kein Laborverlauf geladen. Die Zahlen auf der Startseite sind ein Rechenbeispiel, keine Patientenakte. Ein Panel erscheint hier erst, nachdem Sie eines aus dieser Sitzung gespeichert haben.',
+    'Auf diesem Konto ist noch kein bestätigtes Laborpanel gespeichert. Die Zahlen auf der Startseite sind ein Rechenbeispiel, keine Patientenakte.',
   sessionLead:
-    'Gespeicherte Panels aus dieser Browsersitzung. Diese Liste wird nicht aus dem Labordatensatz geladen.',
+    'Auf diesem Konto bestätigte Panels. Melden Sie sich mit derselben Wiederherstellungsphrase an, um sie wieder zu sehen. Ein Labor kann sie nicht abrufen.',
   exportTitle: 'Sauberen, druckbaren PDF-Bericht zu Verlauf und Biomarkern exportieren',
   export: 'PDF-Bericht exportieren',
   addDate: 'Testdatum hinzufügen',
